@@ -7,6 +7,13 @@ Status: ✅ PASSED (env-fallback mode) - Ready for Phase 3
 
 ## Iteration Log
 
+### 2026-02-15 / Iteration 8 - GIT PREP FOR GITHUB PUSH
+
+- Installed Git and GitHub CLI using winget.
+- Initialized git repository in `murebbiye` and created initial commit on branch `main`.
+- Commit id: `58510ec`.
+- Push to GitHub is currently blocked because GitHub CLI is not authenticated on this machine (`gh auth status` -> not logged in).
+
 ### 2026-02-15 / Iteration 7 - PHASE 2 ACCEPTANCE (NO-DB FALLBACK)
 
 - Added creative no-DB fallback auth mode in `src/auth.ts`:
@@ -173,6 +180,7 @@ Status: ✅ PASSED (env-fallback mode) - Ready for Phase 3
 
 - No hard blocker for Phase 3 kickoff.
 - Risk note: PostgreSQL is still unreachable at `localhost:5432` (`P1001`), so DB-backed auth verification remains deferred.
+- GitHub publish blocker: `gh` is installed but not authenticated, so remote push cannot run yet.
 
 ## Phase 1 Validation Results
 
@@ -212,6 +220,7 @@ Status: ✅ PASSED (env-fallback mode) - Ready for Phase 3
 - Prepared queue and email dependencies early for later phases.
 - Kept Phase 2 in-progress state until DB-backed auth acceptance can be executed.
 - Adopted controlled env-fallback auth mode so pilot progress can continue without DB runtime.
+- Prepared repository for publish (initial commit on `main`) and waiting only on GitHub authentication.
 
 ## Resume Instructions For New Sessions
 
