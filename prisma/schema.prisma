@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  STUDENT
+}
+
+enum LessonTrack {
+  ENGLISH
+  AI_MODULE
+}
+
+enum LessonStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  REVIEW_ONLY
+  FAILED
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum QueueJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum BudgetMode {
+  NORMAL
+  SHORT_RESPONSE_LOW_COST
+  REVIEW_ONLY
+}
+
+model User {
+  id             String              @id @default(cuid())
+  email          String              @unique
+  passwordHash   String
+  role           UserRole
+  nickname       String?
+  parentEmail    String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  lessons        Lesson[]
+  uploads        CurriculumDocument[] @relation("DocumentUploader")
+  parentSummaries ParentSummaryEmail[]
+}
+
+model CurriculumDocument {
+  id             String            @id @default(cuid())
+  uploaderId     String
+  title          String
+  originalName   String
+  mimeType       String
+  storageKey     String
+  sourceLanguage String            @default("en")
+  checksum       String
+  status         DocumentStatus    @default(UPLOADED)
+  errorMessage   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  uploader       User              @relation("DocumentUploader", fields: [uploaderId], references: [id], onDelete: Restrict)
+  chunks         CurriculumChunk[]
+
+  @@index([uploaderId, createdAt])
+  @@index([status])
+}
+
+model CurriculumChunk {
+  id         String             @id @default(cuid())
+  documentId String
+  ordinal    Int
+  content    String
+  tokenCount Int
+  createdAt  DateTime           @default(now())
+  document   CurriculumDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, ordinal])
+  @@index([documentId])
+}
+
+model Lesson {
+  id                     String                @id @default(cuid())
+  studentId              String
+  locale                 String                @default("tr")
+  track                  LessonTrack
+  status                 LessonStatus          @default(PLANNED)
+  durationMinutes        Int                   @default(35)
+  explainMinutes         Int                   @default(7)
+  guidedPracticeMinutes  Int                   @default(20)
+  independentTaskMinutes Int                   @default(8)
+  budgetModeAtStart      BudgetMode            @default(NORMAL)
+  startedAt              DateTime?
+  completedAt            DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  student                User                  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  interactions           LessonInteraction[]
+  metricSnapshot         LessonMetricSnapshot?
+  emailSummary           ParentSummaryEmail?
+  budgetLedgerEntries    BudgetLedger[]
+
+  @@index([studentId, createdAt])
+  @@index([status])
+}
+
+model LessonInteraction {
+  id              String   @id @default(cuid())
+  lessonId        String
+  actorRole       String
+  promptText      String
+  responseText    String
+  usedHint        Boolean  @default(false)
+  isCorrect       Boolean?
+  outOfScopeQuery Boolean  @default(false)
+  responseMs      Int?
+  createdAt       DateTime @default(now())
+  lesson          Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, createdAt])
+}
+
+model LessonMetricSnapshot {
+  id                    String   @id @default(cuid())
+  lessonId              String   @unique
+  accuracyRatio         Decimal  @db.Decimal(5, 4)
+  hintDependency        Decimal  @db.Decimal(5, 4)
+  repetitionPerformance Decimal  @db.Decimal(5, 4)
+  interactionQuality    Decimal  @db.Decimal(5, 4)
+  timeManagement        Decimal  @db.Decimal(5, 4)
+  createdAt             DateTime @default(now())
+  lesson                Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model ParentSummaryEmail {
+  id             String      @id @default(cuid())
+  lessonId       String      @unique
+  studentId      String
+  parentEmail    String
+  locale         String      @default("tr")
+  subject        String
+  bodyText       String
+  status         EmailStatus @default(QUEUED)
+  attempts       Int         @default(0)
+  lastError      String?
+  queuedAt       DateTime    @default(now())
+  sentAt         DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  lesson         Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student        User        @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@index([status, queuedAt])
+}
+
+model QueueJob {
+  id           String         @id @default(cuid())
+  jobType      String
+  payload      Json
+  runAt        DateTime
+  status       QueueJobStatus @default(PENDING)
+  attempts     Int            @default(0)
+  maxAttempts  Int            @default(3)
+  lastError    String?
+  lockedAt     DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([status, runAt])
+}
+
+model BudgetLedger {
+  id          String   @id @default(cuid())
+  lessonId    String?
+  provider    String
+  model       String
+  requestType String
+  costUsd     Decimal  @db.Decimal(10, 4)
+  tokensIn    Int?
+  tokensOut   Int?
+  createdAt   DateTime @default(now())
+  lesson      Lesson?  @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([lessonId])
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}

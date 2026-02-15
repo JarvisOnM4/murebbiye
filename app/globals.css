@@ -1,0 +1,150 @@
+:root {
+  --bg: #f5f3ee;
+  --panel: #fffdf8;
+  --text: #172127;
+  --muted: #4b5a63;
+  --accent: #0d7a63;
+  --accent-soft: #d6efe8;
+  --border: #d9ddd8;
+  --warn: #b5512b;
+  --font-body: "Manrope", "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(circle at top right, #d4ebe5 0%, var(--bg) 42%, #ece6dc 100%);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+a {
+  color: inherit;
+}
+
+.page-wrap {
+  min-height: 100vh;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.shell {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  background: linear-gradient(140deg, #ffffffde, #f8f8f1de);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.5rem;
+}
+
+.hero h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+.hero p {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 1rem;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.75rem;
+  padding: 0.2rem 0.55rem;
+  margin-bottom: 0.7rem;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.auth-shell {
+  max-width: 560px;
+}
+
+.auth-form {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.field label {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.field input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.75rem;
+  background: #ffffff;
+  color: var(--text);
+}
+
+.btn {
+  margin-top: 0.25rem;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.62rem 0.9rem;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-error {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+  .page-wrap {
+    padding-inline: 0.9rem;
+  }
+
+  .hero {
+    padding: 1.2rem;
+  }
+}
