@@ -7,6 +7,12 @@ Status: ✅ PASSED (env-fallback mode) - Ready for Phase 3
 
 ## Iteration Log
 
+### 2026-02-15 / Iteration 9 - GITHUB AUTH HANDOFF
+
+- Confirmed GitHub authentication only needs to be done once per machine/user profile for `gh`.
+- Push remains blocked until user completes `gh auth login` (or provides `GH_TOKEN`).
+- Next action after auth: create/push `murebbiye` remote repository from local `main` branch.
+
 ### 2026-02-15 / Iteration 8 - GIT PREP FOR GITHUB PUSH
 
 - Installed Git and GitHub CLI using winget.
