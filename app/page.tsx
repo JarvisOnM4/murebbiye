@@ -36,6 +36,9 @@ export default function HomePage() {
               <a href="/admin"> /admin</a> and <a href="/student"> /student</a>.
             </p>
             <p>
+              Admin uploads are live at <span className="mono">/api/admin/curriculum/upload</span>
+            </p>
+            <p>
               Health check endpoint: <span className="mono">/api/health</span>
             </p>
           </article>

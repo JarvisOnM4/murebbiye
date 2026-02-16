@@ -11,6 +11,11 @@ const envSchema = z.object({
   PER_LESSON_CAP_USD: z.coerce.number().positive(),
   BUDGET_MODE_AT_80_PERCENT: z.string().min(1),
   BUDGET_MODE_AT_100_PERCENT: z.string().min(1),
+  UPLOAD_MAX_MB: z.coerce.number().int().positive().default(20),
+  AUTH_ALLOW_ENV_FALLBACK: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
   SMTP_FROM: z.string().optional(),
 });
 
@@ -29,5 +34,7 @@ export const env = envSchema.parse({
     process.env.BUDGET_MODE_AT_80_PERCENT ?? process.env.BUDGET_MODE_AT_80,
   BUDGET_MODE_AT_100_PERCENT:
     process.env.BUDGET_MODE_AT_100_PERCENT ?? process.env.BUDGET_MODE_AT_100,
+  UPLOAD_MAX_MB: process.env.UPLOAD_MAX_MB,
+  AUTH_ALLOW_ENV_FALLBACK: process.env.AUTH_ALLOW_ENV_FALLBACK,
   SMTP_FROM: process.env.SMTP_FROM ?? process.env.EMAIL_FROM,
 });

@@ -1,6 +1,7 @@
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
+import { AssistantPanel } from "./assistant-panel";
 
 export default async function StudentPage() {
   const session = await auth();
@@ -35,6 +36,8 @@ export default async function StudentPage() {
             </button>
           </form>
         </article>
+
+        <AssistantPanel />
       </section>
     </main>
   );

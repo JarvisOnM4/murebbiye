@@ -1,6 +1,9 @@
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
+import { CurriculumPanel } from "./curriculum-panel";
+import { OpsPanel } from "./ops-panel";
+import { ParentReportsPanel } from "./parent-reports-panel";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -35,6 +38,10 @@ export default async function AdminPage() {
             </button>
           </form>
         </article>
+
+        <CurriculumPanel />
+        <OpsPanel />
+        <ParentReportsPanel />
       </section>
     </main>
   );
