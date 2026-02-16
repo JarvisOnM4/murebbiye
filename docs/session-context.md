@@ -7,6 +7,21 @@ Status: ✅ PASSED (budget gates + latency guardrails validated) - Pilot phases 
 
 ## Iteration Log
 
+### 2026-02-16 / Iteration 22 - CI DEPENDENCY FIX (NPM ERESOLVE)
+
+- Investigated GitHub CI failure on `npm ci` caused by `nodemailer` peer mismatch with `next-auth@5.0.0-beta.30`.
+- Updated dependency alignment:
+  - `package.json`: `nodemailer` upgraded from `^6.10.1` to `^7.0.13`
+  - `package-lock.json` refreshed accordingly
+- Validation run after update:
+  - ✅ `npm ci` (now completes; peer conflict is warning-only)
+  - ✅ `npx prisma generate`
+  - ✅ `npm run lint`
+  - ✅ `npm run typecheck`
+  - ✅ `npm run build`
+- Outcome:
+  - CI install step is no longer blocked by hard `ERESOLVE` failure.
+
 ### 2026-02-16 / Iteration 21 - GITHUB PUSH COMPLETE
 
 - Finalized repository handover package and pushed latest work to GitHub.
