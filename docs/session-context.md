@@ -7,6 +7,16 @@ Status: ✅ PASSED (budget gates + latency guardrails validated) - Pilot phases 
 
 ## Iteration Log
 
+### 2026-02-16 / Iteration 23 - CI ENV FIX FOR PRISMA VALIDATE
+
+- Investigated GitHub Actions failure: `npx prisma validate` failed with `P1012` (`DATABASE_URL` missing).
+- Updated CI workflow to provide required environment variables at job scope:
+  - `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `APP_BASE_URL`
+  - `MONTHLY_CAP_USD`, `PER_LESSON_CAP_USD`, `BUDGET_MODE_AT_80_PERCENT`, `BUDGET_MODE_AT_100_PERCENT`
+  - `AUTH_ALLOW_ENV_FALLBACK`, `UPLOAD_MAX_MB`
+- Expected outcome:
+  - Prisma schema validation step can parse schema env requirements in CI without needing a live DB connection.
+
 ### 2026-02-16 / Iteration 22 - CI DEPENDENCY FIX (NPM ERESOLVE)
 
 - Investigated GitHub CI failure on `npm ci` caused by `nodemailer` peer mismatch with `next-auth@5.0.0-beta.30`.

@@ -9,6 +9,17 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pilot_mvp?schema=public
+      NEXTAUTH_SECRET: ci-local-secret
+      NEXTAUTH_URL: http://localhost:3000
+      APP_BASE_URL: http://localhost:3000
+      MONTHLY_CAP_USD: "10"
+      PER_LESSON_CAP_USD: "0.2"
+      BUDGET_MODE_AT_80_PERCENT: short_response_low_cost_model
+      BUDGET_MODE_AT_100_PERCENT: stop_new_generation_review_only
+      AUTH_ALLOW_ENV_FALLBACK: "true"
+      UPLOAD_MAX_MB: "20"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
