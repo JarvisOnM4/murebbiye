@@ -17,7 +17,6 @@ export type CurriculumChunkContext = {
   sourceLanguage: string;
   sourceType: CurriculumSourceType;
   updatedAt: string;
-  persistence: "db" | "fallback";
 };
 
 export type CurriculumDocumentSummary = {
@@ -36,7 +35,6 @@ export type CurriculumDocumentSummary = {
   chunkCount: number;
   track: LessonTrack;
   sourceType: CurriculumSourceType;
-  persistence: "db" | "fallback";
 };
 
 export type IngestCurriculumInput = {

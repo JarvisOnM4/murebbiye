@@ -117,8 +117,8 @@ export async function enrichDocument(input: EnrichDocumentInput) {
       // Record analysis cost in the budget ledger for this chunk
       if (analysis.totalCostUsd > 0) {
         await recordBudgetUsage({
-          provider: "openai",
-          model: "gpt-4o-mini",
+          provider: "bedrock",
+          model: "anthropic.claude-3-5-haiku-20241022-v1:0",
           requestType: "media_analysis",
           costUsd: analysis.totalCostUsd,
           tokensIn: analysis.totalTokensIn,
@@ -250,7 +250,7 @@ export async function generateApprovedAssets(jobId: string) {
 
         // Record generation cost in the budget ledger
         await recordBudgetUsage({
-          provider: "openai",
+          provider: "bedrock",
           model: result.generationModel,
           requestType: "media_generation",
           costUsd: result.costUsd,

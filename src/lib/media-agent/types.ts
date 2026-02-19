@@ -57,7 +57,6 @@ export type MediaAssetSummary = {
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
-  persistence: "db" | "fallback";
 }
 
 export type EnrichmentJobSummary = {
@@ -75,7 +74,6 @@ export type EnrichmentJobSummary = {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  persistence: "db" | "fallback";
 }
 
 export type EnrichmentJobDetail = EnrichmentJobSummary & {

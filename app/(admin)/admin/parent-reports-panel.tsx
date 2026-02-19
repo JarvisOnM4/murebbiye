@@ -127,7 +127,7 @@ export function ParentReportsPanel() {
               </div>
               <p className="mono">lesson={record.lessonId}</p>
               <p>
-                attempts={record.attempts} persistence={record.persistence} locale={record.locale}
+                attempts={record.attempts} locale={record.locale}
               </p>
               <p>queued: {new Date(record.queuedAt).toLocaleString()}</p>
               {record.sentAt ? <p>sent: {new Date(record.sentAt).toLocaleString()}</p> : null}

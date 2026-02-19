@@ -258,8 +258,7 @@ export function CurriculumPanel() {
                 </div>
                 <p className="mono">{record.originalName}</p>
                 <p>
-                  Type: {record.sourceType.toUpperCase()} | Chunks: {record.chunkCount} | Store:{" "}
-                  {record.persistence}
+                  Type: {record.sourceType.toUpperCase()} | Chunks: {record.chunkCount}
                 </p>
                 <p>Updated: {new Date(record.updatedAt).toLocaleString()}</p>
                 {record.errorMessage ? <p className="warn">{record.errorMessage}</p> : null}

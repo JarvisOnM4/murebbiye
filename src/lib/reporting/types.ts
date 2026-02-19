@@ -44,7 +44,6 @@ export type ParentSummaryRecord = {
   sentAt: string | null;
   createdAt: string;
   updatedAt: string;
-  persistence: "db" | "fallback";
 };
 
 export type ParentSummaryQueueJob = {
@@ -57,7 +56,6 @@ export type ParentSummaryQueueJob = {
   lastError: string | null;
   createdAt: string;
   updatedAt: string;
-  persistence: "db" | "fallback";
 };
 
 export type CompleteLessonInput = {

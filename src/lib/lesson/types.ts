@@ -77,7 +77,6 @@ export type LessonDraftSummary = {
   budgetModeAtStart: BudgetMode;
   createdAt: string;
   updatedAt: string;
-  persistence: "db" | "fallback";
 };
 
 export type LessonDraftRecord = LessonDraftSummary & {

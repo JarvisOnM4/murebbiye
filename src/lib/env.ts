@@ -17,6 +17,8 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === "true"),
   SMTP_FROM: z.string().optional(),
+  AWS_REGION: z.string().default("us-east-1"),
+  S3_BUCKET_NAME: z.string().min(1).optional(),
 });
 
 export const env = envSchema.parse({
@@ -37,4 +39,6 @@ export const env = envSchema.parse({
   UPLOAD_MAX_MB: process.env.UPLOAD_MAX_MB,
   AUTH_ALLOW_ENV_FALLBACK: process.env.AUTH_ALLOW_ENV_FALLBACK,
   SMTP_FROM: process.env.SMTP_FROM ?? process.env.EMAIL_FROM,
+  AWS_REGION: process.env.AWS_REGION,
+  S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
 });

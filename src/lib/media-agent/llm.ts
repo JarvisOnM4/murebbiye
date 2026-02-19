@@ -1,81 +1,105 @@
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from "@aws-sdk/client-bedrock-runtime"
+
 type LlmMessage = {
-  role: "system" | "user" | "assistant";
-  content: string;
+  role: "system" | "user" | "assistant"
+  content: string
 }
 
 type LlmCallInput = {
-  messages: LlmMessage[];
-  model?: string;
-  maxTokens?: number;
-  temperature?: number;
-  jsonMode?: boolean;
+  messages: LlmMessage[]
+  model?: string
+  maxTokens?: number
+  temperature?: number
+  jsonMode?: boolean
 }
 
 type LlmCallOutput = {
-  content: string;
-  model: string;
-  tokensIn: number;
-  tokensOut: number;
-  costUsd: number;
+  content: string
+  model: string
+  tokensIn: number
+  tokensOut: number
+  costUsd: number
 }
 
-// Cost rates per 1M tokens for known models
+// Cost rates per 1M tokens for known Bedrock models
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
-  "gpt-4o-mini": { input: 0.15, output: 0.60 },
-  "gpt-4o": { input: 2.50, output: 10.00 },
-  "claude-3-5-haiku-latest": { input: 0.25, output: 1.25 },
+  "anthropic.claude-3-5-haiku-20241022-v1:0": { input: 0.25, output: 1.25 },
+  "anthropic.claude-3-5-sonnet-20241022-v2:0": { input: 3.00, output: 15.00 },
 }
+
+const DEFAULT_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0"
 
 function computeCost(model: string, tokensIn: number, tokensOut: number): number {
-  const rates = MODEL_COSTS[model] ?? MODEL_COSTS["gpt-4o-mini"]
+  const rates = MODEL_COSTS[model] ?? MODEL_COSTS[DEFAULT_MODEL]
   return Number(((tokensIn * rates.input + tokensOut * rates.output) / 1_000_000).toFixed(6))
 }
 
-export async function callLlm(input: LlmCallInput): Promise<LlmCallOutput> {
-  const apiKey = process.env.OPENAI_API_KEY
+// Module-level singleton client — avoids creating a new client per call
+const bedrockClient = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION ?? "us-east-1",
+})
 
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not configured. Media agent requires an LLM provider.")
+export async function callLlm(input: LlmCallInput): Promise<LlmCallOutput> {
+  const model = input.model ?? process.env.PRIMARY_MODEL_NAME ?? DEFAULT_MODEL
+
+  // Extract system message from the messages array
+  const systemMessages = input.messages.filter((m) => m.role === "system")
+  const nonSystemMessages = input.messages.filter((m) => m.role !== "system")
+
+  let systemPrompt = systemMessages.map((m) => m.content).join("\n\n")
+
+  // For JSON mode, prepend JSON-only instruction to the system prompt
+  if (input.jsonMode) {
+    const jsonInstruction =
+      "You must respond with valid JSON only. No markdown, no explanation, just the JSON object."
+    systemPrompt = systemPrompt
+      ? `${jsonInstruction}\n\n${systemPrompt}`
+      : jsonInstruction
   }
 
-  const model = input.model ?? process.env.PRIMARY_MODEL_NAME ?? "gpt-4o-mini"
-
+  // Build the Anthropic Messages API body for Bedrock
   const body: Record<string, unknown> = {
-    model,
-    messages: input.messages,
+    anthropic_version: "bedrock-2023-05-31",
     max_tokens: input.maxTokens ?? 2048,
+    messages: nonSystemMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    })),
     temperature: input.temperature ?? 0.7,
   }
 
-  if (input.jsonMode) {
-    body.response_format = { type: "json_object" }
+  if (systemPrompt) {
+    body.system = systemPrompt
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
+  const command = new InvokeModelCommand({
+    modelId: model,
+    contentType: "application/json",
+    accept: "application/json",
     body: JSON.stringify(body),
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`LLM API error (${response.status}): ${errorText}`)
+  const response = await bedrockClient.send(command)
+
+  // Decode the response body
+  const rawBody = new TextDecoder().decode(response.body)
+  const data = JSON.parse(rawBody) as {
+    content: Array<{ type: string; text: string }>
+    usage: { input_tokens: number; output_tokens: number }
+    model?: string
   }
 
-  const data = await response.json() as {
-    choices: Array<{ message: { content: string } }>;
-    model: string;
-    usage: { prompt_tokens: number; completion_tokens: number };
-  }
+  const tokensIn = data.usage?.input_tokens ?? 0
+  const tokensOut = data.usage?.output_tokens ?? 0
 
-  const tokensIn = data.usage?.prompt_tokens ?? 0
-  const tokensOut = data.usage?.completion_tokens ?? 0
+  // Extract text from the first content block
+  const textContent = data.content?.find((c) => c.type === "text")?.text ?? ""
 
   return {
-    content: data.choices[0]?.message?.content ?? "",
+    content: textContent,
     model: data.model ?? model,
     tokensIn,
     tokensOut,

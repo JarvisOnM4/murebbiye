@@ -10,7 +10,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pilot_mvp?schema=public
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/murebbiye?schema=public
       NEXTAUTH_SECRET: ci-local-secret
       NEXTAUTH_URL: http://localhost:3000
       APP_BASE_URL: http://localhost:3000
@@ -44,6 +44,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build

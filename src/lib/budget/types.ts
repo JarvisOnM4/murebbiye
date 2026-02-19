@@ -23,5 +23,4 @@ export type BudgetLedgerEntry = {
   tokensIn: number | null;
   tokensOut: number | null;
   createdAt: string;
-  persistence: "db" | "fallback";
 };

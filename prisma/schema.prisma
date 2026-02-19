@@ -293,3 +293,14 @@ model EnrichmentJob {
   @@index([documentId])
   @@index([status])
 }
+
+model PerformanceMetric {
+  id         String   @id @default(cuid())
+  routeName  String
+  durationMs Float
+  statusCode Int
+  createdAt  DateTime @default(now())
+
+  @@index([routeName, createdAt])
+  @@index([createdAt])
+}
