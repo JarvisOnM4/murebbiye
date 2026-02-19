@@ -212,3 +212,84 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
+
+enum MediaAssetType {
+  DIAGRAM
+  FLOWCHART
+  ILLUSTRATION
+  SLIDE_DECK
+  VIDEO_SCRIPT
+  INTERACTIVE
+  CARTOON_NARRATIVE
+}
+
+enum MediaAssetStatus {
+  STORYBOARD_PENDING
+  STORYBOARD_APPROVED
+  STORYBOARD_REJECTED
+  GENERATING
+  GENERATED
+  FAILED
+}
+
+enum EnrichmentJobStatus {
+  QUEUED
+  ANALYZING
+  STORYBOARD_READY
+  GENERATING
+  COMPLETED
+  PARTIALLY_COMPLETED
+  FAILED
+}
+
+model MediaAsset {
+  id                String           @id @default(cuid())
+  enrichmentJobId   String
+  documentId        String
+  chunkOrdinal      Int?
+  lessonId          String?
+  type              MediaAssetType
+  status            MediaAssetStatus @default(STORYBOARD_PENDING)
+  locale            String           @default("tr")
+  title             String
+  altText           String?
+  storyboard        String
+  content           Json?
+  renderHints       Json?
+  generationModel   String?
+  generationCostUsd Decimal?         @db.Decimal(10, 6)
+  tokensIn          Int?
+  tokensOut         Int?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  enrichmentJob     EnrichmentJob    @relation(fields: [enrichmentJobId], references: [id], onDelete: Cascade)
+
+  @@index([enrichmentJobId])
+  @@index([documentId, status])
+  @@index([lessonId])
+  @@index([type, status])
+}
+
+model EnrichmentJob {
+  id                  String              @id @default(cuid())
+  documentId          String
+  status              EnrichmentJobStatus @default(QUEUED)
+  locale              String              @default("tr")
+  mediaTypesRequested String[]
+  assetsGenerated     Int                 @default(0)
+  assetsFailed        Int                 @default(0)
+  totalCostUsd        Decimal             @db.Decimal(10, 6) @default(0)
+  budgetModeAtStart   String              @default("normal")
+  errorMessage        String?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  mediaAssets         MediaAsset[]
+
+  @@index([documentId])
+  @@index([status])
+}

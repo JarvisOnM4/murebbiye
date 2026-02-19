@@ -1,11 +1,45 @@
 # Project Session Context
 
-Last Updated: 2026-02-16
+Last Updated: 2026-02-19
 Project Name: murebbiye
-Current Phase: Phase 7 - Performance, budget controls, and pilot QA hardening
-Status: ✅ PASSED (budget gates + latency guardrails validated) - Pilot phases complete
+Current Phase: Phase 8 - AI Media Agent (text-to-lesson enrichment)
+Status: ✅ IMPLEMENTED (schema, service layer, API endpoints, admin/student UI panels complete)
 
 ## Iteration Log
+
+### 2026-02-19 / Iteration 24 - PHASE 8 IMPLEMENTED (AI MEDIA AGENT)
+
+- Implemented two-stage AI media enrichment pipeline for curriculum content:
+  - Stage 1 (Storyboard): Analyze curriculum chunks, generate detailed text-based media previews for admin review
+  - Stage 2 (Generation): After admin approval, generate actual media content (diagrams, slides, interactive exercises, etc.)
+- Schema additions in `prisma/schema.prisma`:
+  - 3 enums: `MediaAssetType` (7 types), `MediaAssetStatus` (6 statuses), `EnrichmentJobStatus` (7 statuses)
+  - 2 models: `MediaAsset` (media content with storyboard/generation lifecycle), `EnrichmentJob` (enrichment pipeline tracking)
+- Service layer (`src/lib/media-agent/`):
+  - `types.ts` - Domain types and constants (budget sub-cap $0.06, max 10 assets/document)
+  - `repository.ts` - DB/fallback persistence following project pattern
+  - `llm.ts` - Lightweight OpenAI wrapper using fetch API (no npm dependency)
+  - `analyzer.ts` - 3-stage content analysis (keyword heuristics, media recommendations, LLM storyboard generation)
+  - `generators/index.ts` - 6 generators (diagram/Mermaid, slides/JSON, interactive/exercises, video script, cartoon panels, illustration/SVG)
+  - `orchestrator.ts` - Two-stage pipeline coordinator (enrichDocument + generateApprovedAssets)
+  - `service.ts` - 10 public API functions
+- API endpoints (8 routes):
+  - `POST /api/admin/media-agent/enrich` - Trigger enrichment for a document
+  - `GET /api/admin/media-agent/jobs` - List enrichment jobs
+  - `GET /api/admin/media-agent/jobs/[jobId]` - Get job detail with assets
+  - `GET /api/admin/media-agent/assets` - List/filter media assets
+  - `GET /api/admin/media-agent/assets/[assetId]` - Get asset detail
+  - `POST /api/admin/media-agent/assets/[assetId]/review` - Approve/reject storyboard
+  - `POST /api/admin/media-agent/generate` - Start generation for approved assets
+  - `GET /api/student/lessons/[lessonId]/media` - Student access to generated media
+- UI panels:
+  - `app/(admin)/admin/media-agent-panel.tsx` - Admin enrichment dashboard with storyboard review
+  - `app/(student)/student/lesson-media-panel.tsx` - Student media viewer with type-specific rendering
+- Added smoke test: `scripts/phase8-smoke.mjs`
+- Validation:
+  - ✅ `npx tsc --noEmit` (zero TypeScript errors)
+  - ✅ `npx prisma generate` (Prisma Client generated)
+  - ⚠ `npm run build` blocked by pre-existing SWC binary issue (not Phase 8 related)
 
 ### 2026-02-16 / Iteration 23 - CI ENV FIX FOR PRISMA VALIDATE
 
@@ -376,9 +410,18 @@ Status: ✅ PASSED (budget gates + latency guardrails validated) - Pilot phases 
 5. ✅ Phase 5: Scope-constrained assistant - **COMPLETED (curriculum-bounded guardrails validated)**
 6. ✅ Phase 6: Metrics + parent reports - **COMPLETED (queue-backed parent report flow validated)**
 7. ✅ Phase 7: Performance, budget controls, and pilot QA hardening - **COMPLETED (budget and latency gates validated)**
+8. ✅ Phase 8: AI Media Agent (text-to-lesson enrichment) - **IMPLEMENTED (two-stage storyboard→generation pipeline)**
 
 ## Actions Completed
 
+- ✅ Phase 8 implemented:
+  - Two-stage pipeline: storyboard text previews generated for admin review before media generation
+  - 7 media types supported: diagram, flowchart, illustration, slide deck, video script, interactive, cartoon narrative
+  - Budget sub-cap enforced at $0.06 per enrichment, max 10 assets per document
+  - Admin panel provides enrichment trigger, storyboard review queue, and generated assets library
+  - Student panel renders type-specific media (Mermaid diagrams, slide carousels, interactive exercises)
+  - All 8 API endpoints wired with auth guards and zod validation
+  - TypeScript compiles with zero errors
 - ✅ Phase 7 acceptance verified:
   - Budget mode transitions validated with simulation (`normal` -> `short_response_low_cost_model` -> `review_only`)
   - New lesson generation blocked at 100% budget while review/practice path remains available
@@ -558,6 +601,24 @@ Status: ✅ PASSED (budget gates + latency guardrails validated) - Pilot phases 
 | Smoke: review mode continuity | ✅ PASS | `/api/student/assistant/respond` remains available in review-only budget mode |
 | Smoke: latency gate | ✅ PASS | `/api/admin/performance/summary` reports median <= 3000ms (`median=5ms`) |
 
+## Phase 8 Validation Results
+
+| Command | Status | Output |
+|---------|--------|--------|
+| npx tsc --noEmit | ✅ PASS | Zero TypeScript errors |
+| npx prisma generate | ✅ PASS | Prisma Client generated with MediaAsset + EnrichmentJob models |
+| npm run build | ⚠ BLOCKED | Pre-existing SWC binary issue (not Phase 8 related) |
+| Smoke: list jobs | ✅ PASS | `/api/admin/media-agent/jobs` returns empty array |
+| Smoke: list assets | ✅ PASS | `/api/admin/media-agent/assets` returns empty array |
+| Smoke: invalid enrich body | ✅ PASS | `/api/admin/media-agent/enrich` returns `400` with validation errors |
+| Smoke: enrich missing doc | ✅ PASS | `/api/admin/media-agent/enrich` returns `422` with service error |
+| Smoke: get missing job | ✅ PASS | `/api/admin/media-agent/jobs/[id]` returns `404` |
+| Smoke: get missing asset | ✅ PASS | `/api/admin/media-agent/assets/[id]` returns `404` |
+| Smoke: generate bad job | ✅ PASS | `/api/admin/media-agent/generate` returns `422` |
+| Smoke: student media | ✅ PASS | `/api/student/lessons/[id]/media` returns empty array |
+| Smoke: auth guard (student->admin) | ✅ PASS | Student gets `403` on admin media-agent endpoints |
+| Smoke: review missing asset | ✅ PASS | `/api/admin/media-agent/assets/[id]/review` returns `422` |
+
 ## Key Decisions Log
 
 - Successfully used alternative Node.js installation method via CDN mirror (npmmirror.com) when direct download failed.
@@ -578,6 +639,10 @@ Status: ✅ PASSED (budget gates + latency guardrails validated) - Pilot phases 
 - Added budget simulation + enforcement controls to validate 80% and 100% policy gates without production spend.
 - Added DB failure backoff (`src/lib/persistence.ts`) to avoid repeated slow DB timeout attempts in fallback mode.
 - Switched performance telemetry storage to in-memory ring buffer for low-overhead latency measurement during pilot QA.
+- Adopted two-stage media pipeline (storyboard preview → admin approval → generation) per user request for admin visibility before media generation.
+- Used fetch-based OpenAI wrapper (no `openai` npm dependency) to keep dependency surface minimal and consistent with project style.
+- Capped media assets at 10 per document and $0.06 per enrichment to stay within $10/month budget constraint.
+- Downgraded Prisma to v6.4.1 locally to work around v6.19.2 config loading bug on this machine.
 
 ## Resume Instructions For New Sessions
 
@@ -596,6 +661,7 @@ Status: ✅ PASSED (budget gates + latency guardrails validated) - Pilot phases 
 - Phase 5 smoke script: `scripts/phase5-smoke.mjs`.
 - Phase 6 smoke script: `scripts/phase6-smoke.mjs`.
 - Phase 7 smoke script: `scripts/phase7-smoke.mjs`.
+- Phase 8 smoke script: `scripts/phase8-smoke.mjs`.
 
 ## Update Policy
 

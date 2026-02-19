@@ -2,6 +2,7 @@ import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { AssistantPanel } from "./assistant-panel";
+import { LessonMediaPanel } from "./lesson-media-panel";
 
 export default async function StudentPage() {
   const session = await auth();
@@ -38,6 +39,7 @@ export default async function StudentPage() {
         </article>
 
         <AssistantPanel />
+        <LessonMediaPanel lessonId="demo" />
       </section>
     </main>
   );

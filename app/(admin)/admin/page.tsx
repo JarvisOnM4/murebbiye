@@ -4,6 +4,7 @@ import { auth, signOut } from "@/auth";
 import { CurriculumPanel } from "./curriculum-panel";
 import { OpsPanel } from "./ops-panel";
 import { ParentReportsPanel } from "./parent-reports-panel";
+import { MediaAgentPanel } from "./media-agent-panel";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -42,6 +43,7 @@ export default async function AdminPage() {
         <CurriculumPanel />
         <OpsPanel />
         <ParentReportsPanel />
+        <MediaAgentPanel />
       </section>
     </main>
   );
