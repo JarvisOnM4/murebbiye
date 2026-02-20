@@ -1,8 +1,3 @@
-import {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-} from "@aws-sdk/client-bedrock-runtime"
-
 type LlmMessage = {
   role: "system" | "user" | "assistant"
   content: string
@@ -24,28 +19,38 @@ type LlmCallOutput = {
   costUsd: number
 }
 
-// Cost rates per 1M tokens for known Bedrock models
+// Cost rates per 1M tokens for known models
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
   "anthropic.claude-3-5-haiku-20241022-v1:0": { input: 0.25, output: 1.25 },
   "anthropic.claude-3-5-sonnet-20241022-v2:0": { input: 3.00, output: 15.00 },
+  "haiku": { input: 0.25, output: 1.25 },
+  "sonnet": { input: 3.00, output: 15.00 },
 }
 
 const DEFAULT_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0"
 
-function computeCost(model: string, tokensIn: number, tokensOut: number): number {
+export function computeCost(model: string, tokensIn: number, tokensOut: number): number {
   const rates = MODEL_COSTS[model] ?? MODEL_COSTS[DEFAULT_MODEL]
   return Number(((tokensIn * rates.input + tokensOut * rates.output) / 1_000_000).toFixed(6))
 }
 
-// Module-level singleton client — avoids creating a new client per call
-const bedrockClient = new BedrockRuntimeClient({
-  region: process.env.AWS_REGION ?? "us-east-1",
-})
+function getZeusConfig() {
+  const baseUrl = process.env.ZEUS_BASE_URL
+  const apiKey = process.env.ZEUS_API_KEY
+  if (!baseUrl) {
+    throw new Error("ZEUS_BASE_URL is not configured")
+  }
+  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey }
+}
 
 export async function callLlm(input: LlmCallInput): Promise<LlmCallOutput> {
   const model = input.model ?? process.env.PRIMARY_MODEL_NAME ?? DEFAULT_MODEL
+  const { baseUrl, apiKey } = getZeusConfig()
 
-  // Extract system message from the messages array
+  // Build OpenAI-compatible messages array
+  const messages: Array<{ role: string; content: string }> = []
+
+  // Collect system messages into a single system message
   const systemMessages = input.messages.filter((m) => m.role === "system")
   const nonSystemMessages = input.messages.filter((m) => m.role !== "system")
 
@@ -60,46 +65,48 @@ export async function callLlm(input: LlmCallInput): Promise<LlmCallOutput> {
       : jsonInstruction
   }
 
-  // Build the Anthropic Messages API body for Bedrock
-  const body: Record<string, unknown> = {
-    anthropic_version: "bedrock-2023-05-31",
-    max_tokens: input.maxTokens ?? 2048,
-    messages: nonSystemMessages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-    temperature: input.temperature ?? 0.7,
-  }
-
   if (systemPrompt) {
-    body.system = systemPrompt
+    messages.push({ role: "system", content: systemPrompt })
   }
 
-  const command = new InvokeModelCommand({
-    modelId: model,
-    contentType: "application/json",
-    accept: "application/json",
-    body: JSON.stringify(body),
+  for (const m of nonSystemMessages) {
+    messages.push({ role: m.role, content: m.content })
+  }
+
+  // Call Zeus (OpenAI-compatible API)
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`
+  }
+
+  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: input.maxTokens ?? 2048,
+      temperature: input.temperature ?? 0.7,
+    }),
   })
 
-  const response = await bedrockClient.send(command)
-
-  // Decode the response body
-  const rawBody = new TextDecoder().decode(response.body)
-  const data = JSON.parse(rawBody) as {
-    content: Array<{ type: string; text: string }>
-    usage: { input_tokens: number; output_tokens: number }
-    model?: string
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "")
+    throw new Error(`Zeus API error ${response.status}: ${errorText.slice(0, 200)}`)
   }
 
-  const tokensIn = data.usage?.input_tokens ?? 0
-  const tokensOut = data.usage?.output_tokens ?? 0
+  const data = (await response.json()) as {
+    model: string
+    choices: Array<{ message: { content: string } }>
+    usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
+  }
 
-  // Extract text from the first content block
-  const textContent = data.content?.find((c) => c.type === "text")?.text ?? ""
+  const tokensIn = data.usage?.prompt_tokens ?? 0
+  const tokensOut = data.usage?.completion_tokens ?? 0
+  const content = data.choices?.[0]?.message?.content ?? ""
 
   return {
-    content: textContent,
+    content,
     model: data.model ?? model,
     tokensIn,
     tokensOut,

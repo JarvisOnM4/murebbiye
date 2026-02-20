@@ -1,21 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect } from "vitest"
+import { computeCost } from "../src/lib/media-agent/llm"
 
-// Test the pure helper functions from llm.ts without invoking AWS SDK.
-// We extract and test computeCost logic directly.
-
-const MODEL_COSTS: Record<string, { input: number; output: number }> = {
-  "anthropic.claude-3-5-haiku-20241022-v1:0": { input: 0.25, output: 1.25 },
-  "anthropic.claude-3-5-sonnet-20241022-v2:0": { input: 3.0, output: 15.0 },
-}
+// Test the pure helper functions from llm.ts without invoking Zeus API.
 
 const DEFAULT_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0"
-
-function computeCost(model: string, tokensIn: number, tokensOut: number): number {
-  const rates = MODEL_COSTS[model] ?? MODEL_COSTS[DEFAULT_MODEL]
-  return Number(
-    ((tokensIn * rates.input + tokensOut * rates.output) / 1_000_000).toFixed(6)
-  )
-}
 
 describe("computeCost", () => {
   it("computes Haiku cost correctly", () => {
@@ -50,6 +38,11 @@ describe("computeCost", () => {
     const cost = computeCost(DEFAULT_MODEL, 1_000_000, 1_000_000)
     // 1M * 0.25/1M + 1M * 1.25/1M = 0.25 + 1.25 = 1.5
     expect(cost).toBeCloseTo(1.5, 4)
+  })
+
+  it("supports alias model names", () => {
+    const cost = computeCost("haiku", 1000, 500)
+    expect(cost).toBeCloseTo(0.000875, 6)
   })
 })
 

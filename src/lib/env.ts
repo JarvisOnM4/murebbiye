@@ -19,6 +19,8 @@ const envSchema = z.object({
   SMTP_FROM: z.string().optional(),
   AWS_REGION: z.string().default("us-east-1"),
   S3_BUCKET_NAME: z.string().min(1).optional(),
+  ZEUS_BASE_URL: z.string().url(),
+  ZEUS_API_KEY: z.string().min(1).optional(),
 });
 
 export const env = envSchema.parse({
@@ -41,4 +43,6 @@ export const env = envSchema.parse({
   SMTP_FROM: process.env.SMTP_FROM ?? process.env.EMAIL_FROM,
   AWS_REGION: process.env.AWS_REGION,
   S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
+  ZEUS_BASE_URL: process.env.ZEUS_BASE_URL,
+  ZEUS_API_KEY: process.env.ZEUS_API_KEY,
 });
