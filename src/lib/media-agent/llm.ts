@@ -1,3 +1,10 @@
+import {
+  BedrockRuntimeClient,
+  ConverseCommand,
+  type Message,
+  type SystemContentBlock,
+} from "@aws-sdk/client-bedrock-runtime"
+
 type LlmMessage = {
   role: "system" | "user" | "assistant"
   content: string
@@ -21,42 +28,45 @@ type LlmCallOutput = {
 
 // Cost rates per 1M tokens for known models
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
-  "anthropic.claude-3-5-haiku-20241022-v1:0": { input: 0.25, output: 1.25 },
-  "anthropic.claude-3-5-sonnet-20241022-v2:0": { input: 3.00, output: 15.00 },
-  "haiku": { input: 0.25, output: 1.25 },
+  "us.anthropic.claude-3-5-haiku-20241022-v1:0": { input: 0.80, output: 4.00 },
+  "anthropic.claude-3-5-haiku-20241022-v1:0": { input: 0.80, output: 4.00 },
+  "us.anthropic.claude-3-5-sonnet-20241022-v2:0": { input: 3.00, output: 15.00 },
+  "anthropic.claude-3-haiku-20240307-v1:0": { input: 0.25, output: 1.25 },
+  "haiku": { input: 0.80, output: 4.00 },
   "sonnet": { input: 3.00, output: 15.00 },
 }
 
-const DEFAULT_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0"
+const DEFAULT_MODEL = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+
+let _client: BedrockRuntimeClient | null = null
+
+function getClient(): BedrockRuntimeClient {
+  if (!_client) {
+    _client = new BedrockRuntimeClient({
+      region: process.env.AWS_REGION ?? "us-east-1",
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    })
+  }
+  return _client
+}
 
 export function computeCost(model: string, tokensIn: number, tokensOut: number): number {
   const rates = MODEL_COSTS[model] ?? MODEL_COSTS[DEFAULT_MODEL]
   return Number(((tokensIn * rates.input + tokensOut * rates.output) / 1_000_000).toFixed(6))
 }
 
-function getZeusConfig() {
-  const baseUrl = process.env.ZEUS_BASE_URL
-  const apiKey = process.env.ZEUS_API_KEY
-  if (!baseUrl) {
-    throw new Error("ZEUS_BASE_URL is not configured")
-  }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey }
-}
-
 export async function callLlm(input: LlmCallInput): Promise<LlmCallOutput> {
   const model = input.model ?? process.env.PRIMARY_MODEL_NAME ?? DEFAULT_MODEL
-  const { baseUrl, apiKey } = getZeusConfig()
+  const client = getClient()
 
-  // Build OpenAI-compatible messages array
-  const messages: Array<{ role: string; content: string }> = []
-
-  // Collect system messages into a single system message
   const systemMessages = input.messages.filter((m) => m.role === "system")
   const nonSystemMessages = input.messages.filter((m) => m.role !== "system")
 
   let systemPrompt = systemMessages.map((m) => m.content).join("\n\n")
 
-  // For JSON mode, prepend JSON-only instruction to the system prompt
   if (input.jsonMode) {
     const jsonInstruction =
       "You must respond with valid JSON only. No markdown, no explanation, just the JSON object."
@@ -65,49 +75,35 @@ export async function callLlm(input: LlmCallInput): Promise<LlmCallOutput> {
       : jsonInstruction
   }
 
-  if (systemPrompt) {
-    messages.push({ role: "system", content: systemPrompt })
-  }
+  const system: SystemContentBlock[] = systemPrompt
+    ? [{ text: systemPrompt }]
+    : []
 
-  for (const m of nonSystemMessages) {
-    messages.push({ role: m.role, content: m.content })
-  }
+  const messages: Message[] = nonSystemMessages.map((m) => ({
+    role: m.role as "user" | "assistant",
+    content: [{ text: m.content }],
+  }))
 
-  // Call Zeus (OpenAI-compatible API)
-  const headers: Record<string, string> = { "Content-Type": "application/json" }
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`
-  }
-
-  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: input.maxTokens ?? 2048,
+  const command = new ConverseCommand({
+    modelId: model,
+    system,
+    messages,
+    inferenceConfig: {
+      maxTokens: input.maxTokens ?? 2048,
       temperature: input.temperature ?? 0.7,
-    }),
+    },
   })
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "")
-    throw new Error(`Zeus API error ${response.status}: ${errorText.slice(0, 200)}`)
-  }
+  const response = await client.send(command)
 
-  const data = (await response.json()) as {
-    model: string
-    choices: Array<{ message: { content: string } }>
-    usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
-  }
-
-  const tokensIn = data.usage?.prompt_tokens ?? 0
-  const tokensOut = data.usage?.completion_tokens ?? 0
-  const content = data.choices?.[0]?.message?.content ?? ""
+  const tokensIn = response.usage?.inputTokens ?? 0
+  const tokensOut = response.usage?.outputTokens ?? 0
+  const content =
+    response.output?.message?.content?.[0]?.text ?? ""
 
   return {
     content,
-    model: data.model ?? model,
+    model: response.metrics ? model : model,
     tokensIn,
     tokensOut,
     costUsd: computeCost(model, tokensIn, tokensOut),

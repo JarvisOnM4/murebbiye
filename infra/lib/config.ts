@@ -12,6 +12,10 @@ export const config = {
     bucketName: "murebbiye-curriculum",
   },
   bedrock: {
-    modelArn: "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0",
+    modelArns: [
+      "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-*",
+      "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-*",
+      "arn:aws:bedrock:*:936197736978:inference-profile/us.anthropic.claude-*",
+    ],
   },
 };

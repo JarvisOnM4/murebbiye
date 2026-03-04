@@ -18,9 +18,10 @@ const envSchema = z.object({
     .transform((value) => value === "true"),
   SMTP_FROM: z.string().optional(),
   AWS_REGION: z.string().default("us-east-1"),
+  AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_BUCKET_NAME: z.string().min(1).optional(),
-  ZEUS_BASE_URL: z.string().url(),
-  ZEUS_API_KEY: z.string().min(1).optional(),
+  BEDROCK_MODEL_ID: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -42,7 +43,8 @@ export const env = envSchema.parse({
   AUTH_ALLOW_ENV_FALLBACK: process.env.AUTH_ALLOW_ENV_FALLBACK,
   SMTP_FROM: process.env.SMTP_FROM ?? process.env.EMAIL_FROM,
   AWS_REGION: process.env.AWS_REGION,
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
-  ZEUS_BASE_URL: process.env.ZEUS_BASE_URL,
-  ZEUS_API_KEY: process.env.ZEUS_API_KEY,
+  BEDROCK_MODEL_ID: process.env.BEDROCK_MODEL_ID,
 });

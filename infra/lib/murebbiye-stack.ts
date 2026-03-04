@@ -121,8 +121,8 @@ export class MurebbiyeStack extends cdk.Stack {
       new iam.PolicyStatement({
         sid: "AllowBedrockInvoke",
         effect: iam.Effect.ALLOW,
-        actions: ["bedrock:InvokeModel"],
-        resources: [config.bedrock.modelArn],
+        actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+        resources: config.bedrock.modelArns,
       })
     );
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Murebbiye is a bilingual (Turkish/English) AI tutoring platform built with Next.js 15, React 19, Tailwind CSS, and Prisma ORM. It uses Zeus Gateway (OpenAI-compatible API) for LLM calls, S3 for file storage, and RDS PostgreSQL for the database.
+Murebbiye is a bilingual (Turkish/English) AI tutoring platform built with Next.js 15, React 19, Tailwind CSS, and Prisma ORM. It uses AWS Bedrock (Claude Haiku) for LLM calls, S3 for file storage, and RDS PostgreSQL for the database.
 
 ## Commands
 
@@ -37,7 +37,7 @@ cd infra && npx cdk deploy  # Deploy AWS stack
 - **App Router**: `app/` directory with `[locale]` for i18n (tr, en)
 - **API Routes**: `app/api/` — all server endpoints (auth, curriculum, lesson, budget, health, media-agent, performance, queue, reporting)
 - **Business Logic**: `src/lib/` — each domain has its own directory with `repository.ts`, `types.ts`, and optionally `service.ts`
-- **LLM Client**: `src/lib/media-agent/llm.ts` calls Zeus Gateway (OpenAI-compatible API via `fetch()`) with `callLlm()` and `callLlmJson<T>()`. Requires `ZEUS_BASE_URL` and `ZEUS_API_KEY` env vars.
+- **LLM Client**: `src/lib/media-agent/llm.ts` calls AWS Bedrock via `@aws-sdk/client-bedrock-runtime` Converse API with `callLlm()` and `callLlmJson<T>()`. Uses `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` env vars.
 - **Storage**: `src/lib/storage/s3.ts` wraps `@aws-sdk/client-s3` with `uploadToS3()` and `downloadFromS3()`
 - **Environment**: `src/lib/env.ts` uses Zod to validate all env vars at startup
 - **Database**: `src/lib/prisma.ts` exports a singleton `prisma` client
