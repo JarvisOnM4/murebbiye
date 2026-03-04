@@ -3,6 +3,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as ses from "aws-cdk-lib/aws-ses";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 import { config } from "./config";
@@ -126,6 +127,16 @@ export class MurebbiyeStack extends cdk.Stack {
       })
     );
 
+    // Policy: send emails via SES
+    appUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "AllowSESSend",
+        effect: iam.Effect.ALLOW,
+        actions: ["ses:SendEmail", "ses:SendRawEmail"],
+        resources: [`arn:aws:ses:${config.region}:${this.account}:identity/*`],
+      })
+    );
+
     // Policy: CRUD objects in the curriculum bucket
     appUser.addToPolicy(
       new iam.PolicyStatement({
@@ -150,6 +161,13 @@ export class MurebbiyeStack extends cdk.Stack {
         secretStringValue: accessKey.secretAccessKey,
       }
     );
+
+    // ---------------------------------------------------------------
+    // SES — Email identity for parent reports
+    // ---------------------------------------------------------------
+    const emailIdentity = new ses.EmailIdentity(this, "EmailIdentity", {
+      identity: ses.Identity.domain("murebbiye.org"),
+    });
 
     // ---------------------------------------------------------------
     // Stack Outputs
@@ -182,6 +200,22 @@ export class MurebbiyeStack extends cdk.Stack {
     new cdk.CfnOutput(this, "IamSecretKeyArn", {
       value: accessKeySecret.secretArn,
       description: "Secrets Manager ARN for the IAM secret access key",
+    });
+
+    // SES DKIM DNS records (add these as CNAMEs in your DNS)
+    new cdk.CfnOutput(this, "SesDkimRecord1", {
+      value: `${emailIdentity.dkimDnsTokenName1} -> ${emailIdentity.dkimDnsTokenValue1}`,
+      description: "SES DKIM CNAME record 1",
+    });
+
+    new cdk.CfnOutput(this, "SesDkimRecord2", {
+      value: `${emailIdentity.dkimDnsTokenName2} -> ${emailIdentity.dkimDnsTokenValue2}`,
+      description: "SES DKIM CNAME record 2",
+    });
+
+    new cdk.CfnOutput(this, "SesDkimRecord3", {
+      value: `${emailIdentity.dkimDnsTokenName3} -> ${emailIdentity.dkimDnsTokenValue3}`,
+      description: "SES DKIM CNAME record 3",
     });
   }
 }
