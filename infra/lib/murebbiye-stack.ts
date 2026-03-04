@@ -55,7 +55,7 @@ export class MurebbiyeStack extends cdk.Stack {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_16,
       }),
-      description: "Murebbiye PostgreSQL 16 parameter group — SSL enforced",
+      description: "Murebbiye PostgreSQL 16 parameter group - SSL enforced",
       parameters: {
         "rds.force_ssl": "1",
       },
