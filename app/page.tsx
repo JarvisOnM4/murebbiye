@@ -76,7 +76,6 @@ export default function LaunchPage() {
         </div>
 
         <footer className="launch-footer">
-          <p className="launch-dedication">Türk Gençliğine Armağan</p>
           <p className="launch-quote">
             &ldquo;Hayatta en hakiki mürşit ilimdir, fendir.&rdquo;
           </p>
