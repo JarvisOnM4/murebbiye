@@ -132,13 +132,22 @@ const authConfig: NextAuthConfig = {
             return authorizeFromEnvFallback(email, parsed.data.password);
           }
 
+          if (!user.passwordHash) {
+            return null;
+          }
+
           const isValidPassword = await bcrypt.compare(parsed.data.password, user.passwordHash);
 
           if (!isValidPassword) {
             return null;
           }
 
-          return toAuthorizedUser(user);
+          return toAuthorizedUser({
+            id: user.id,
+            email: user.email ?? email,
+            role: user.role,
+            nickname: user.nickname,
+          });
         } catch (error) {
           console.warn("[auth] Database lookup failed, trying env fallback mode", error);
           return authorizeFromEnvFallback(email, parsed.data.password);

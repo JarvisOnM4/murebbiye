@@ -1,9 +1,8 @@
-import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
 import { completeLessonAndQueueSummary } from "@/lib/reporting/service";
 import { withPerformanceMetric } from "@/lib/performance/measure";
+import { getStudentIdentity } from "@/lib/learner/identity";
 
 export const runtime = "nodejs";
 
@@ -34,9 +33,9 @@ function asErrorMessage(error: unknown) {
 
 export async function POST(request: Request) {
   return withPerformanceMetric("POST /api/student/lessons/complete", async () => {
-    const session = await auth();
+    const identity = await getStudentIdentity();
 
-    if (!session?.user || session.user.role !== UserRole.STUDENT) {
+    if (!identity) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
     try {
       const result = await completeLessonAndQueueSummary({
         lessonId: parsed.data.lessonId,
-        studentId: session.user.id,
+        studentId: identity.id,
         locale: parsed.data.locale,
         interactions: parsed.data.interactions,
         parentEmail: parsed.data.parentEmail

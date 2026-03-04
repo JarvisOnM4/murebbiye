@@ -932,6 +932,200 @@ a {
   letter-spacing: 0.01em;
 }
 
+/* ── Start / Link buttons ── */
+
+.launch-start-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  border: 1px solid rgba(45, 212, 168, 0.4);
+  background: rgba(45, 212, 168, 0.12);
+  color: #2dd4a8;
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
+}
+
+.launch-start-btn:hover {
+  background: rgba(45, 212, 168, 0.2);
+  border-color: rgba(45, 212, 168, 0.6);
+  transform: translateY(-1px);
+}
+
+.launch-start-btn:active {
+  transform: translateY(0);
+}
+
+.launch-start-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.launch-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #8a8a9a;
+  font-family: var(--font-body, 'Inter', sans-serif);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.launch-link-btn:hover {
+  color: #c0c0d0;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Settings page ── */
+
+.settings-wrap {
+  min-height: 100vh;
+  background: #08090f;
+  color: #f0ede6;
+  padding: 2rem 1.5rem;
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+
+.settings-card {
+  max-width: 480px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.settings-card h1 {
+  margin: 0;
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-size: 1.5rem;
+}
+
+.settings-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.settings-field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8a8a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.settings-field code {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #2dd4a8;
+}
+
+.settings-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f0ede6;
+  font-size: 1rem;
+  outline: none;
+  text-align: center;
+  letter-spacing: 0.3em;
+}
+
+.settings-input:focus {
+  border-color: rgba(45, 212, 168, 0.5);
+}
+
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  gap: 0.5rem;
+}
+
+.avatar-option {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  transition: border-color 0.2s;
+}
+
+.avatar-option:hover {
+  border-color: rgba(45, 212, 168, 0.3);
+}
+
+.avatar-option.selected {
+  border-color: #2dd4a8;
+  background: rgba(45, 212, 168, 0.1);
+}
+
+/* ── Recover / Guardian pages ── */
+
+.recover-wrap,
+.guardian-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  background: #08090f;
+  font-family: var(--font-body, 'Inter', sans-serif);
+}
+
+.recover-card,
+.guardian-card {
+  max-width: 420px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 2rem;
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  display: grid;
+  gap: 1rem;
+}
+
+.recover-card h1,
+.guardian-card h1 {
+  margin: 0;
+  font-family: var(--font-display, 'Space Grotesk', sans-serif);
+  font-size: 1.5rem;
+  color: #f0ede6;
+}
+
+.recover-card p,
+.guardian-card p {
+  color: #8a8a9a;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 640px) {

@@ -71,8 +71,8 @@ export type CompleteLessonResult = {
   studentId: string;
   track: LessonTrack;
   metrics: LessonMetrics;
-  parentSummary: ParentSummaryRecord;
-  queueJob: ParentSummaryQueueJob;
+  parentSummary?: ParentSummaryRecord;
+  queueJob?: ParentSummaryQueueJob;
 };
 
 export type QueueDispatchItem = {

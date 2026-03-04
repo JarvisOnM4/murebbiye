@@ -13,6 +13,11 @@ enum UserRole {
   STUDENT
 }
 
+enum AuthMode {
+  CREDENTIALS
+  LEARNER_TOKEN
+}
+
 enum LessonTrack {
   ENGLISH
   AI_MODULE
@@ -53,17 +58,24 @@ enum BudgetMode {
 }
 
 model User {
-  id             String              @id @default(cuid())
-  email          String              @unique
-  passwordHash   String
-  role           UserRole
-  nickname       String?
-  parentEmail    String?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  lessons        Lesson[]
-  uploads        CurriculumDocument[] @relation("DocumentUploader")
+  id              String               @id @default(cuid())
+  email           String?              @unique
+  passwordHash    String?
+  role            UserRole
+  authMode        AuthMode             @default(CREDENTIALS)
+  nickname        String?
+  parentEmail     String?
+  learnerToken    String?              @unique
+  recoveryCode    String?              @unique
+  pinHash         String?
+  avatar          String?
+  lastActiveAt    DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  lessons         Lesson[]
+  uploads         CurriculumDocument[] @relation("DocumentUploader")
   parentSummaries ParentSummaryEmail[]
+  guardianLinks   GuardianLink[]
 }
 
 model CurriculumDocument {
@@ -153,39 +165,39 @@ model LessonMetricSnapshot {
 }
 
 model ParentSummaryEmail {
-  id             String      @id @default(cuid())
-  lessonId       String      @unique
-  studentId      String
-  parentEmail    String
-  locale         String      @default("tr")
-  subject        String
-  bodyText       String
-  status         EmailStatus @default(QUEUED)
-  attempts       Int         @default(0)
-  lastError      String?
-  queuedAt       DateTime    @default(now())
-  sentAt         DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  lesson         Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student        User        @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  id          String      @id @default(cuid())
+  lessonId    String      @unique
+  studentId   String
+  parentEmail String
+  locale      String      @default("tr")
+  subject     String
+  bodyText    String
+  status      EmailStatus @default(QUEUED)
+  attempts    Int         @default(0)
+  lastError   String?
+  queuedAt    DateTime    @default(now())
+  sentAt      DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  lesson      Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student     User        @relation(fields: [studentId], references: [id], onDelete: Restrict)
 
   @@index([status, queuedAt])
 }
 
 model QueueJob {
-  id           String         @id @default(cuid())
-  jobType      String
-  payload      Json
-  runAt        DateTime
-  status       QueueJobStatus @default(PENDING)
-  attempts     Int            @default(0)
-  maxAttempts  Int            @default(3)
-  lastError    String?
-  lockedAt     DateTime?
-  completedAt  DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id          String         @id @default(cuid())
+  jobType     String
+  payload     Json
+  runAt       DateTime
+  status      QueueJobStatus @default(PENDING)
+  attempts    Int            @default(0)
+  maxAttempts Int            @default(3)
+  lastError   String?
+  lockedAt    DateTime?
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([status, runAt])
 }
@@ -282,7 +294,7 @@ model EnrichmentJob {
   mediaTypesRequested String[]
   assetsGenerated     Int                 @default(0)
   assetsFailed        Int                 @default(0)
-  totalCostUsd        Decimal             @db.Decimal(10, 6) @default(0)
+  totalCostUsd        Decimal             @default(0) @db.Decimal(10, 6)
   budgetModeAtStart   String              @default("normal")
   errorMessage        String?
   startedAt           DateTime?
@@ -304,4 +316,21 @@ model PerformanceMetric {
 
   @@index([routeName, createdAt])
   @@index([createdAt])
+}
+
+model GuardianLink {
+  id                String    @id @default(cuid())
+  learnerId         String
+  guardianEmail     String
+  verified          Boolean   @default(false)
+  verificationToken String    @unique
+  expiresAt         DateTime
+  consentGivenAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  learner           User      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@unique([learnerId, guardianEmail])
+  @@index([guardianEmail])
+  @@index([verificationToken])
 }

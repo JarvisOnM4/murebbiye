@@ -1,17 +1,194 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+type FlowState = "landing" | "nickname" | "code";
+
 export default function LaunchPage() {
+  const [flow, setFlow] = useState<FlowState>("landing");
+  const [nickname, setNickname] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  async function handleStart() {
+    if (nickname.trim().length < 2) {
+      setError("Takma ad en az 2 karakter olmalı.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/learner/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nickname: nickname.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || data.errors?.[0] || "Bir hata oluştu.");
+        return;
+      }
+
+      setRecoveryCode(data.recoveryCode);
+      setFlow("code");
+    } catch {
+      setError("Bağlantı hatası. Tekrar deneyin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleContinue() {
+    router.push("/student");
+  }
+
+  if (flow === "code") {
+    return (
+      <main className="launch-wrap">
+        <div className="launch-aurora" aria-hidden="true">
+          <div className="aurora-blob blob-1" />
+          <div className="aurora-blob blob-2" />
+          <div className="aurora-blob blob-3" />
+        </div>
+        <div className="launch-grid-overlay" aria-hidden="true" />
+        <div className="launch-grain" aria-hidden="true" />
+
+        <section className="launch-content">
+          <h1 className="launch-title" style={{ fontSize: "2rem" }}>
+            Hoş geldin, {nickname}!
+          </h1>
+
+          <p className="launch-subtitle">Kurtarma Kodun</p>
+
+          <div
+            style={{
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              borderRadius: "12px",
+              padding: "1.25rem 2rem",
+              margin: "1rem auto",
+              maxWidth: "360px",
+              textAlign: "center",
+            }}
+          >
+            <code
+              style={{
+                fontSize: "1.5rem",
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+                color: "#fff",
+              }}
+            >
+              {recoveryCode}
+            </code>
+          </div>
+
+          <p
+            className="launch-mission"
+            style={{ fontSize: "0.85rem", maxWidth: "400px" }}
+          >
+            Bu kodu bir yere yaz! Başka bir cihazdan giriş yaparken lazım olacak.
+            Ayarlar sayfasında PIN de belirleyebilirsin.
+          </p>
+
+          <button
+            className="launch-start-btn"
+            onClick={handleContinue}
+            title="Öğrenmeye başla"
+          >
+            Öğrenmeye Başla
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  if (flow === "nickname") {
+    return (
+      <main className="launch-wrap">
+        <div className="launch-aurora" aria-hidden="true">
+          <div className="aurora-blob blob-1" />
+          <div className="aurora-blob blob-2" />
+          <div className="aurora-blob blob-3" />
+        </div>
+        <div className="launch-grid-overlay" aria-hidden="true" />
+        <div className="launch-grain" aria-hidden="true" />
+
+        <section className="launch-content">
+          <h1 className="launch-title" style={{ fontSize: "2rem" }}>
+            Sana ne diyelim?
+          </h1>
+
+          <p className="launch-subtitle">Bir takma ad seç</p>
+
+          <div style={{ maxWidth: "320px", margin: "1rem auto" }}>
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="Takma adın..."
+              maxLength={30}
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && handleStart()}
+              style={{
+                width: "100%",
+                padding: "0.75rem 1rem",
+                borderRadius: "10px",
+                border: "1px solid rgba(255,255,255,0.25)",
+                background: "rgba(255,255,255,0.1)",
+                color: "#fff",
+                fontSize: "1.1rem",
+                outline: "none",
+                textAlign: "center",
+              }}
+            />
+            {error && (
+              <p style={{ color: "#ff8a8a", fontSize: "0.85rem", marginTop: "0.5rem" }}>
+                {error}
+              </p>
+            )}
+          </div>
+
+          <button
+            className="launch-start-btn"
+            onClick={handleStart}
+            disabled={loading}
+            title="Hesap oluştur ve başla"
+          >
+            {loading ? "Hazırlanıyor..." : "Devam"}
+          </button>
+
+          <button
+            className="launch-link-btn"
+            onClick={() => {
+              setFlow("landing");
+              setError("");
+            }}
+            title="Geri dön"
+          >
+            Geri
+          </button>
+        </section>
+      </main>
+    );
+  }
+
+  // Landing state
   return (
     <main className="launch-wrap">
-      {/* Aurora background blobs */}
       <div className="launch-aurora" aria-hidden="true">
         <div className="aurora-blob blob-1" />
         <div className="aurora-blob blob-2" />
         <div className="aurora-blob blob-3" />
       </div>
-
-      {/* Subtle grid overlay */}
       <div className="launch-grid-overlay" aria-hidden="true" />
-
-      {/* Film grain */}
       <div className="launch-grain" aria-hidden="true" />
 
       <section className="launch-content">
@@ -73,6 +250,23 @@ export default function LaunchPage() {
               <span>Tüketme değil, üretme</span>
             </div>
           </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.5rem", flexWrap: "wrap" }}>
+          <button
+            className="launch-start-btn"
+            onClick={() => setFlow("nickname")}
+            title="Hemen öğrenmeye başla"
+          >
+            Başla
+          </button>
+          <button
+            className="launch-link-btn"
+            onClick={() => router.push("/recover")}
+            title="Mevcut hesabına dön"
+          >
+            Kodumla Devam Et
+          </button>
         </div>
 
         <footer className="launch-footer">

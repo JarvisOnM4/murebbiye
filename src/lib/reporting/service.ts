@@ -65,6 +65,19 @@ async function resolveStudentProfile(studentId: string) {
   };
 }
 
+async function resolveGuardianEmail(studentId: string): Promise<string | null> {
+  try {
+    const link = await prisma.guardianLink.findFirst({
+      where: { learnerId: studentId, verified: true },
+      select: { guardianEmail: true },
+      orderBy: { createdAt: "desc" },
+    });
+    return link?.guardianEmail ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeLocale(value: SupportedLocale) {
   return value === "en" ? "en" : "tr";
 }
@@ -100,14 +113,24 @@ export async function completeLessonAndQueueSummary(
   }
 
   const profile = await resolveStudentProfile(input.studentId);
-  const parentEmail = input.parentEmail?.trim() || profile.parentEmail;
-
-  if (!parentEmail) {
-    throw new Error("Parent email is missing for this student.");
-  }
+  const parentEmail =
+    input.parentEmail?.trim() ||
+    profile.parentEmail ||
+    (await resolveGuardianEmail(input.studentId));
 
   const locale = normalizeLocale(input.locale);
   const track = normalizeTrack(lesson.track);
+
+  // If no parent email from any source, skip email queueing
+  if (!parentEmail) {
+    return {
+      lessonId: input.lessonId,
+      studentId: input.studentId,
+      track,
+      metrics,
+    };
+  }
+
   const summaryDraft = buildParentSummaryDraft({
     locale,
     track,
