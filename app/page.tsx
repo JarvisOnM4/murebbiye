@@ -1,48 +1,86 @@
-import { pilotConfig } from "@/config/pilot";
-
-export default function HomePage() {
+export default function LaunchPage() {
   return (
-    <main className="page-wrap">
-      <section className="shell">
-        <article className="hero">
-          <span className="label">Phase 1 / Bootstrap</span>
-          <h1>murebbiye - TR + EN Pilot</h1>
-          <p>
-            Bu ekran, 14 gunluk MVP pilotunun temel kurulumunu dogrular. This page confirms
-            the baseline app is ready for auth, curriculum ingestion, and lesson features.
+    <main className="launch-wrap">
+      {/* Aurora background blobs */}
+      <div className="launch-aurora" aria-hidden="true">
+        <div className="aurora-blob blob-1" />
+        <div className="aurora-blob blob-2" />
+        <div className="aurora-blob blob-3" />
+      </div>
+
+      {/* Subtle grid overlay */}
+      <div className="launch-grid-overlay" aria-hidden="true" />
+
+      {/* Film grain */}
+      <div className="launch-grain" aria-hidden="true" />
+
+      <section className="launch-content">
+        <div className="launch-badge">
+          <span className="launch-badge-dot" />
+          yakında
+        </div>
+
+        <h1 className="launch-title">mürebbiye</h1>
+
+        <p className="launch-subtitle">Yapay Zeka Eğitim Platformu</p>
+
+        <div className="launch-divider" />
+
+        <p className="launch-mission">
+          Türkiye&apos;nin ilk ücretsiz, açık kaynak, Türkçe yapay zeka eğitim
+          platformu. Çocuklarımız yapay zekayı anlamayı, onunla düşünmeyi ve
+          geleceği şekillendirmeyi burada öğrenecek.
+        </p>
+
+        <div className="launch-features">
+          <div className="launch-feature">
+            <div className="launch-feature-glow" />
+            <span className="launch-feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 12l2.5 2.5L16 9" />
+              </svg>
+            </span>
+            <div>
+              <strong>Ücretsiz</strong>
+              <span>Her zaman, her çocuk için</span>
+            </div>
+          </div>
+
+          <div className="launch-feature">
+            <div className="launch-feature-glow" />
+            <span className="launch-feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+            </span>
+            <div>
+              <strong>Türkçe</strong>
+              <span>Ana dilde, kültürel bağlamda</span>
+            </div>
+          </div>
+
+          <div className="launch-feature">
+            <div className="launch-feature-glow" />
+            <span className="launch-feature-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+            </span>
+            <div>
+              <strong>Yaparak Öğren</strong>
+              <span>Tüketme değil, üretme</span>
+            </div>
+          </div>
+        </div>
+
+        <footer className="launch-footer">
+          <p className="launch-dedication">Türk Gençliğine Armağan</p>
+          <p className="launch-quote">
+            &ldquo;Hayatta en hakiki mürşit ilimdir, fendir.&rdquo;
           </p>
-        </article>
-
-        <section className="grid">
-          <article className="card">
-            <h2>Roles</h2>
-            <p>Admin and Student authentication is active via email/password.</p>
-            <p className="mono">auth.mode: {pilotConfig.auth.mode}</p>
-          </article>
-
-          <article className="card">
-            <h2>Budget Policy</h2>
-            <p>
-              Monthly cap: <strong>${pilotConfig.budget.monthlyCapUsd}</strong>, per lesson:
-              <strong> ${pilotConfig.budget.perLessonCapUsd}</strong>
-            </p>
-            <p className="warn">80% and 100% mode gates are pre-configured in source.</p>
-          </article>
-
-          <article className="card">
-            <h2>Routes</h2>
-            <p>
-              <a href="/login">/login</a> ile giris yapin. Protected routes:
-              <a href="/admin"> /admin</a> and <a href="/student"> /student</a>.
-            </p>
-            <p>
-              Admin uploads are live at <span className="mono">/api/admin/curriculum/upload</span>
-            </p>
-            <p>
-              Health check endpoint: <span className="mono">/api/health</span>
-            </p>
-          </article>
-        </section>
+        </footer>
       </section>
     </main>
   );

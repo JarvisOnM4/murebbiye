@@ -28,7 +28,8 @@ Murebbiye is a bilingual (Turkish/English) AI tutoring platform. It generates pe
 | Web App | Next.js 15, React 19, Tailwind | Vercel | UI + API routes |
 | Database | PostgreSQL 16 | AWS RDS (db.t4g.micro) | All application data |
 | File Storage | S3 | AWS S3 bucket | Curriculum uploads (PDF/MD) |
-| LLM | Claude 3.5 Haiku | AWS Bedrock | Lesson generation, student assistant, media agent |
+| LLM (dev) | Claude Sonnet/Haiku | `claude_cli` / `codex_cli` | Lesson drafting, media descriptions (batch) |
+| LLM (prod) | Claude 3.5 Haiku | Anthropic API or AWS Bedrock (TBD) | Lesson generation, student assistant, media agent |
 | Auth | NextAuth v5 (beta) | Vercel (serverless) | JWT sessions, bcrypt passwords |
 | Email | Nodemailer via SMTP | External SMTP provider | Parent summary emails |
 | Queue | Upstash QStash | Upstash cloud | Async job processing |
@@ -128,8 +129,26 @@ murebbiye/
 | AWS_SECRET_ACCESS_KEY | AWS Secrets Manager | IAM secret key |
 | AWS_REGION | Static | `us-east-1` |
 | S3_BUCKET_NAME | CDK output | Curriculum file bucket |
-| PRIMARY_MODEL_NAME | Static | `anthropic.claude-3-5-haiku-20241022-v1:0` |
+| PRIMARY_MODEL_NAME | Static | `anthropic.claude-3-5-haiku-20241022-v1:0` (Bedrock) or `claude-3-5-haiku-20241022` (Anthropic API) |
 | MONTHLY_CAP_USD | Static | Budget cap (e.g., `10`) |
+
+---
+
+## LLM Strategy (2026-03-04)
+
+Zeus Gateway (OpenAI-compatible proxy on AWS GPU) is **unavailable** — AWS quota requests pending. Current approach:
+
+- **Development (Phase 0-1)**: `claude_cli` / `codex_cli` for batch content generation. No runtime API needed.
+- **Production (Phase 2+)**: Anthropic API direct or AWS Bedrock. Decision deferred to deploy time.
+- **`llm.ts`**: Currently expects Zeus format. Will be updated when runtime LLM is needed.
+
+See `docs/decisions/2026-03-04-zeus-to-cli-pivot.md` for full rationale.
+
+---
+
+## Decision Log
+
+Architecture decisions are tracked in `docs/decisions/`. Each entry records the problem, decision, rationale, and impact. Read these when resuming work after a gap.
 
 ---
 

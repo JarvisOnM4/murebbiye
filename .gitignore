@@ -24,3 +24,8 @@ prisma/dev.db
 prisma/dev.db-journal
 
 /storage/
+.vercel
+
+# GoDaddy exports (contain session data)
+docs/Godaddy-DNS-Management.html
+docs/godaddy-dns-setup.png
