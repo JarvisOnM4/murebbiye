@@ -127,6 +127,19 @@ export class MurebbiyeStack extends cdk.Stack {
       })
     );
 
+    // Policy: AWS Marketplace subscription (required for Anthropic models on Bedrock)
+    appUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "AllowMarketplaceForBedrock",
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "aws-marketplace:ViewSubscriptions",
+          "aws-marketplace:Subscribe",
+        ],
+        resources: ["*"],
+      })
+    );
+
     // Policy: send emails via SES
     appUser.addToPolicy(
       new iam.PolicyStatement({
