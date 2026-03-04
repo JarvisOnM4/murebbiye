@@ -36,14 +36,14 @@ const MODEL_COSTS: Record<string, { input: number; output: number }> = {
   "sonnet": { input: 3.00, output: 15.00 },
 }
 
-const DEFAULT_MODEL = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+const DEFAULT_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0"
 
 let _client: BedrockRuntimeClient | null = null
 
 function getClient(): BedrockRuntimeClient {
   if (!_client) {
     _client = new BedrockRuntimeClient({
-      region: process.env.AWS_REGION ?? "us-east-1",
+      region: process.env.BEDROCK_REGION ?? process.env.AWS_REGION ?? "us-west-2",
       credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,

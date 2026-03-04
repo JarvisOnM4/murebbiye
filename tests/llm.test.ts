@@ -3,7 +3,7 @@ import { computeCost } from "../src/lib/media-agent/llm"
 
 // Test the pure helper functions from llm.ts.
 
-const DEFAULT_MODEL = "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+const DEFAULT_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0"
 
 describe("computeCost", () => {
   it("computes Haiku cost correctly", () => {
