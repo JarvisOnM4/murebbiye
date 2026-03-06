@@ -30,6 +30,7 @@ export function AssistantPanel() {
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [usedSuggestions, setUsedSuggestions] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -233,39 +234,51 @@ export function AssistantPanel() {
   }
 
   function handleSuggestionClick(suggestion: string) {
+    setUsedSuggestions((prev) => new Set(prev).add(suggestion));
     sendQuestion(suggestion);
   }
 
   return (
     <section className="chat-panel">
       <div className="chat-messages">
-        {messages.map((msg) => (
-          <div key={msg.id}>
-            <div
-              className={`chat-bubble ${msg.role === "user" ? "chat-user" : "chat-assistant"}`}
-            >
-              <p className="chat-text">
-                {msg.content}
-                {msg.streaming && <span className="chat-cursor" />}
-              </p>
-            </div>
-            {msg.suggestions && msg.suggestions.length > 0 && !msg.streaming && (
-              <div className="chat-suggestions">
-                {msg.suggestions.map((s, i) => (
-                  <button
-                    key={i}
-                    className="chat-suggestion"
-                    onClick={() => handleSuggestionClick(s)}
-                    disabled={isStreaming}
-                    title={s}
-                  >
-                    {s}
-                  </button>
-                ))}
+        {messages.map((msg, idx) => {
+          const isLastAssistant =
+            msg.role === "assistant" &&
+            !msg.streaming &&
+            idx === messages.findLastIndex((m) => m.role === "assistant" && !m.streaming);
+
+          const visibleSuggestions = isLastAssistant
+            ? msg.suggestions?.filter((s) => !usedSuggestions.has(s))
+            : undefined;
+
+          return (
+            <div key={msg.id}>
+              <div
+                className={`chat-bubble ${msg.role === "user" ? "chat-user" : "chat-assistant"}`}
+              >
+                <p className="chat-text">
+                  {msg.content}
+                  {msg.streaming && <span className="chat-cursor" />}
+                </p>
               </div>
-            )}
-          </div>
-        ))}
+              {visibleSuggestions && visibleSuggestions.length > 0 && (
+                <div className="chat-suggestions">
+                  {visibleSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      className="chat-suggestion"
+                      onClick={() => handleSuggestionClick(s)}
+                      disabled={isStreaming}
+                      title={s}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
