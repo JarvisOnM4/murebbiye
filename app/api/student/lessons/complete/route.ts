@@ -24,6 +24,10 @@ const completeLessonSchema = z.object({
 });
 
 function asErrorMessage(error: unknown) {
+  if (process.env.NODE_ENV === "production") {
+    return "Bir hata oluştu. Lütfen tekrar deneyin.";
+  }
+
   if (error instanceof Error && error.message) {
     return error.message;
   }

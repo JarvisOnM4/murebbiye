@@ -4,6 +4,7 @@ import { auth, signOut } from "@/auth";
 import { getLearnerCookie, verifyLearnerToken, clearLearnerCookie } from "@/lib/learner/token";
 import { prisma } from "@/lib/prisma";
 import { AssistantPanel } from "./assistant-panel";
+import { RecoverySync } from "./recovery-sync";
 
 async function resolveStudent(): Promise<{
   id: string;
@@ -105,11 +106,7 @@ export default async function StudentPage() {
         <AssistantPanel />
 
         {student.recoveryCode && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `try{sessionStorage.setItem("recoveryCode",${JSON.stringify(student.recoveryCode)})}catch(e){}`,
-            }}
-          />
+          <RecoverySync code={student.recoveryCode} />
         )}
       </section>
     </main>

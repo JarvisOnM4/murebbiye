@@ -13,7 +13,9 @@ const requestSchema = z.object({
     .string()
     .trim()
     .min(2, "Takma ad en az 2 karakter olmalı.")
-    .max(30, "Takma ad en fazla 30 karakter olabilir."),
+    .max(30, "Takma ad en fazla 30 karakter olabilir.")
+    .transform((v) => v.replace(/<[^>]*>/g, "").trim())
+    .refine((v) => v.length >= 2, "Takma ad en az 2 karakter olmalı."),
 });
 
 export async function POST(request: Request) {

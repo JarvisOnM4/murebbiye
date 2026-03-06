@@ -22,9 +22,34 @@ type RateLimitResult = {
   resetInSeconds: number;
 };
 
+const memoryStore = new Map<string, { count: number; expiresAt: number }>();
+
+function checkMemoryRateLimit(
+  key: string,
+  maxRequests: number,
+  windowSeconds: number
+): RateLimitResult {
+  const now = Date.now();
+  const entry = memoryStore.get(key);
+
+  if (!entry || entry.expiresAt <= now) {
+    memoryStore.set(key, { count: 1, expiresAt: now + windowSeconds * 1000 });
+    return { allowed: true, remaining: maxRequests - 1, resetInSeconds: windowSeconds };
+  }
+
+  entry.count += 1;
+  const ttl = Math.ceil((entry.expiresAt - now) / 1000);
+
+  return {
+    allowed: entry.count <= maxRequests,
+    remaining: Math.max(0, maxRequests - entry.count),
+    resetInSeconds: ttl,
+  };
+}
+
 /**
- * IP-based sliding window rate limiter using Upstash Redis.
- * Falls back to allow-all if Redis is not configured.
+ * IP-based sliding window rate limiter.
+ * Uses Upstash Redis if configured, otherwise falls back to in-memory Map.
  */
 export async function checkRateLimit(
   ip: string,
@@ -32,14 +57,12 @@ export async function checkRateLimit(
   maxRequests: number,
   windowSeconds: number
 ): Promise<RateLimitResult> {
+  const key = `rl:${action}:${ip}`;
   const client = getRedis();
 
   if (!client) {
-    // No Redis configured — allow all (dev mode)
-    return { allowed: true, remaining: maxRequests, resetInSeconds: 0 };
+    return checkMemoryRateLimit(key, maxRequests, windowSeconds);
   }
-
-  const key = `rl:${action}:${ip}`;
 
   try {
     const current = await client.incr(key);
@@ -56,7 +79,6 @@ export async function checkRateLimit(
       resetInSeconds: ttl > 0 ? ttl : windowSeconds,
     };
   } catch {
-    // Redis failure — fail open
-    return { allowed: true, remaining: maxRequests, resetInSeconds: 0 };
+    return checkMemoryRateLimit(key, maxRequests, windowSeconds);
   }
 }

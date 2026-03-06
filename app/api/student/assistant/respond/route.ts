@@ -5,6 +5,7 @@ import { recordBudgetUsage } from "@/lib/budget/service";
 import { respondWithScopeGuard } from "@/lib/assistant/service";
 import { withPerformanceMetric } from "@/lib/performance/measure";
 import { getStudentIdentity } from "@/lib/learner/identity";
+import { checkRateLimit } from "@/lib/learner/rate-limit";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -22,6 +23,10 @@ function todayDateString() {
 }
 
 function toErrorMessage(error: unknown) {
+  if (process.env.NODE_ENV === "production") {
+    return "Bir hata oluştu. Lütfen tekrar deneyin.";
+  }
+
   if (error instanceof Error && error.message) {
     return error.message;
   }
@@ -49,6 +54,17 @@ async function checkAndIncrementQuota(userId: string): Promise<{ allowed: boolea
 
 export async function POST(request: Request) {
   return withPerformanceMetric("POST /api/student/assistant/respond", async () => {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+    const rateCheck = await checkRateLimit(ip, "assistant-respond", 10, 60);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: "Çok hızlı soruyorsun! Biraz bekle." },
+        { status: 429 }
+      );
+    }
+
     const identity = await getStudentIdentity();
 
     if (!identity) {
