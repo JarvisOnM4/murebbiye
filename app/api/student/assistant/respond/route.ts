@@ -32,14 +32,19 @@ function toErrorMessage(error: unknown) {
 async function checkAndIncrementQuota(userId: string): Promise<{ allowed: boolean; remaining: number }> {
   const date = todayDateString();
 
-  const quota = await prisma.dailyQuota.upsert({
-    where: { userId_date: { userId, date } },
-    create: { userId, date, count: 1 },
-    update: { count: { increment: 1 } },
-  });
+  try {
+    const quota = await prisma.dailyQuota.upsert({
+      where: { userId_date: { userId, date } },
+      create: { userId, date, count: 1 },
+      update: { count: { increment: 1 } },
+    });
 
-  const remaining = Math.max(0, DAILY_QUESTION_LIMIT - quota.count);
-  return { allowed: quota.count <= DAILY_QUESTION_LIMIT, remaining };
+    const remaining = Math.max(0, DAILY_QUESTION_LIMIT - quota.count);
+    return { allowed: quota.count <= DAILY_QUESTION_LIMIT, remaining };
+  } catch {
+    // Table may not exist yet in production — allow request
+    return { allowed: true, remaining: DAILY_QUESTION_LIMIT };
+  }
 }
 
 export async function POST(request: Request) {
