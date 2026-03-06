@@ -853,7 +853,7 @@ a {
   justify-content: center;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 3.5rem;
+  margin-bottom: 2.5rem;
 }
 
 .launch-feature {
@@ -922,7 +922,7 @@ a {
   display: flex;
   gap: 1rem;
   justify-content: center;
-  margin-top: 2rem;
+  margin: 0 0 2rem;
   flex-wrap: wrap;
 }
 
@@ -962,7 +962,8 @@ a {
 /* ── Footer ── */
 
 .launch-footer {
-  padding-top: 2.5rem;
+  padding-top: 2rem;
+  margin-top: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
