@@ -30,7 +30,7 @@ export function AssistantPanel() {
   ]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [usedSuggestions, setUsedSuggestions] = useState<Set<string>>(new Set());
+  const usedSuggestionsRef = useRef<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -74,6 +74,7 @@ export function AssistantPanel() {
             question: question.trim(),
             track: "AI_MODULE",
             locale: "tr",
+            excludeSuggestions: [...usedSuggestionsRef.current],
           }),
           credentials: "same-origin",
           signal: controller.signal,
@@ -105,7 +106,6 @@ export function AssistantPanel() {
           const payload = await response.json();
           const reply = payload.reply;
           if (reply) {
-            setUsedSuggestions(new Set());
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
@@ -175,8 +175,7 @@ export function AssistantPanel() {
                 }
 
                 if (parsed.status !== undefined) {
-                  // Done event — reset used suggestions for fresh set
-                  setUsedSuggestions(new Set());
+                  // Done event
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantId
@@ -236,7 +235,7 @@ export function AssistantPanel() {
   }
 
   function handleSuggestionClick(suggestion: string) {
-    setUsedSuggestions((prev) => new Set(prev).add(suggestion));
+    usedSuggestionsRef.current.add(suggestion);
     sendQuestion(suggestion);
   }
 
@@ -250,7 +249,7 @@ export function AssistantPanel() {
             idx === messages.findLastIndex((m) => m.role === "assistant" && !m.streaming);
 
           const visibleSuggestions = isLastAssistant
-            ? msg.suggestions?.filter((s) => !usedSuggestions.has(s))
+            ? msg.suggestions?.filter((s) => !usedSuggestionsRef.current.has(s))
             : undefined;
 
           return (

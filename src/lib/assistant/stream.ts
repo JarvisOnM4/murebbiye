@@ -112,47 +112,140 @@ function buildContext(chunks: ScoredChunk[]): string {
     .join("\n\n---\n\n");
 }
 
-function buildSuggestions(question: string, ranked: ScoredChunk[]): string[] {
+const TOPIC_QUESTIONS: Record<string, string[]> = {
+  prompt: [
+    "Kötü prompt ile iyi prompt farkı ne?",
+    "Bana bir prompt örneği göster",
+    "Prompt yazarken nelere dikkat etmeliyim?",
+    "Adım adım prompt nasıl oluşturulur?",
+    "Prompt mühendisliği nedir?",
+  ],
+  chatbot: [
+    "Elif'in chatbot hikayesini anlat",
+    "Chatbot nasıl düşünür?",
+    "Chatbot ile insan arasındaki fark ne?",
+    "Chatbot'a nasıl daha iyi soru sorulur?",
+    "Chatbot'lar nasıl öğrenir?",
+  ],
+  halusinasyon: [
+    "Yapay zeka neden bazen yanlış söyler?",
+    "Chatbot'un söylediğini nasıl kontrol ederiz?",
+    "Halüsinasyon nedir ve neden olur?",
+    "Yapay zekanın verdiği bilgiye güvenilir mi?",
+  ],
+  robot: [
+    "Taklit Robotu oyunu nasıl oynanır?",
+    "Robot neden belirsiz komutu anlamaz?",
+    "Robot ile yapay zeka aynı şey mi?",
+  ],
+  deprem: [
+    "Deprem hakkında adım adım prompt nasıl yazılır?",
+    "Yapay zeka doğal afetlerde nasıl kullanılır?",
+  ],
+  rol: [
+    "Chatbot'a rol vermek ne demek?",
+    "Yapay zekaya 'öğretmen gibi davran' desek ne olur?",
+    "Rol vermenin faydası ne?",
+  ],
+  elestir: [
+    "Yapay zekanın söylediğini nasıl kontrol ederiz?",
+    "Eleştirel düşünme nedir?",
+    "Bilgiyi doğrulamak neden önemli?",
+  ],
+  yemek: [
+    "Elif chatbot'tan nasıl tarif aldı?",
+    "Yapay zekadan tarif istemek iyi bir fikir mi?",
+  ],
+  ataturk: [
+    "Atatürk Çanakkale'de ne yaptı?",
+    "Atatürk'ün reformları nelerdir?",
+    "Atatürk nasıl bir liderdi?",
+    "Atatürk'ün eğitim anlayışı neydi?",
+    "Atatürk ve bilim ilişkisi nasıldı?",
+  ],
+  cumhuriyet: [
+    "Cumhuriyet nasıl kuruldu?",
+    "Atatürk'ün dış politika ilkesi nedir?",
+    "Cumhuriyetin ilk yıllarında neler değişti?",
+    "Laiklik ne demek?",
+  ],
+  kurtulus: [
+    "Kurtuluş Savaşı nasıl kazanıldı?",
+    "Büyük Taarruz'u anlat",
+    "Sakarya Meydan Muharebesi nedir?",
+    "İstiklal Savaşı'nda kadınların rolü neydi?",
+  ],
+  nutuk: [
+    "Nutuk nedir?",
+    "Gençliğe Hitabe ne söyler?",
+    "Nutuk neden önemli bir eser?",
+  ],
+  yapay_zeka: [
+    "Yapay zeka ile neler yapılabilir?",
+    "Yapay zeka nasıl çalışır?",
+    "Yapay zeka tehlikeli mi?",
+    "Yapay zeka sanat yapabilir mi?",
+    "Yapay zeka gelecekte hangi meslekleri değiştirir?",
+    "Yapay zeka ve etik nedir?",
+    "Makine öğrenmesi ne demek?",
+    "Derin öğrenme nedir?",
+  ],
+  gunluk: [
+    "Yapay zeka günlük hayatımızda nerede var?",
+    "Telefonumdaki yapay zeka örnekleri neler?",
+    "Sosyal medya yapay zekayı nasıl kullanıyor?",
+    "Oyunlardaki yapay zeka nasıl çalışır?",
+    "Siri ve Alexa nasıl anlıyor bizi?",
+  ],
+  guvenlik: [
+    "İnternette güvende kalmak için ne yapmalıyız?",
+    "Yapay zeka ile sahte haberler nasıl yapılır?",
+    "Deepfake nedir?",
+    "Kişisel verileri neden korumalıyız?",
+  ],
+};
+
+const ALL_SUGGESTIONS = Object.values(TOPIC_QUESTIONS).flat();
+
+function buildSuggestions(
+  question: string,
+  ranked: ScoredChunk[],
+  exclude: string[] = []
+): string[] {
+  const excludeSet = new Set(exclude);
   const suggestions: string[] = [];
   const normalizedQ = normalizeText(question);
 
-  const TOPIC_QUESTIONS: Record<string, string[]> = {
-    prompt: ["Kötü prompt ile iyi prompt farkı ne?", "Bana bir prompt örneği göster"],
-    chatbot: ["Elif'in chatbot hikayesini anlat", "Chatbot nasıl düşünür?"],
-    halusinasyon: ["Yapay zeka neden bazen yanlış söyler?", "Chatbot'un söylediğini nasıl kontrol ederiz?"],
-    robot: ["Taklit Robotu oyunu nasıl oynanır?", "Robot neden belirsiz komutu anlamaz?"],
-    deprem: ["Deprem hakkında adım adım prompt nasıl yazılır?"],
-    rol: ["Chatbot'a rol vermek ne demek?"],
-    elestir: ["Yapay zekanın söylediğini nasıl kontrol ederiz?"],
-    yemek: ["Elif chatbot'tan nasıl tarif aldı?"],
-    bilgi: ["Prompt yazarken nelere dikkat etmeliyim?"],
-    ataturk: ["Atatürk Çanakkale'de ne yaptı?", "Atatürk'ün reformları nelerdir?"],
-    cumhuriyet: ["Cumhuriyet nasıl kuruldu?", "Atatürk'ün dış politika ilkesi nedir?"],
-    kurtulus: ["Kurtuluş Savaşı nasıl kazanıldı?", "Büyük Taarruz'u anlat"],
-    nutuk: ["Nutuk nedir?", "Gençliğe Hitabe ne söyler?"],
-  };
-
+  // Phase 1: Context-relevant suggestions from matched chunks
   for (const item of ranked.slice(0, 5)) {
     const normalized = normalizeText(item.chunk.content);
     for (const [keyword, questions] of Object.entries(TOPIC_QUESTIONS)) {
       if (normalized.includes(keyword) && !normalizedQ.includes(keyword)) {
         for (const q of questions) {
           if (suggestions.length >= 3) break;
-          if (!suggestions.includes(q)) suggestions.push(q);
+          if (!excludeSet.has(q) && !suggestions.includes(q)) {
+            suggestions.push(q);
+          }
         }
       }
     }
     if (suggestions.length >= 3) break;
   }
 
-  const fallbacks = [
-    "Yapay zeka ile neler yapılabilir?",
-    "İyi bir prompt nasıl yazılır?",
-    "Elif'in chatbot hikayesi ne anlatıyor?",
-  ];
-  for (const fb of fallbacks) {
-    if (suggestions.length >= 3) break;
-    if (!suggestions.includes(fb)) suggestions.push(fb);
+  // Phase 2: Fill from full pool (shuffled), excluding used ones
+  if (suggestions.length < 3) {
+    const available = ALL_SUGGESTIONS.filter(
+      (s) => !excludeSet.has(s) && !suggestions.includes(s)
+    );
+    // Fisher-Yates shuffle
+    for (let i = available.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [available[i], available[j]] = [available[j], available[i]];
+    }
+    for (const s of available) {
+      if (suggestions.length >= 3) break;
+      suggestions.push(s);
+    }
   }
 
   return suggestions.slice(0, 3);
@@ -220,7 +313,7 @@ export async function streamWithScopeGuard(
   // In scope — stream from OpenRouter
   const topChunks = ranked.filter((c) => c.score > 0).slice(0, MAX_CONTEXT_CHUNKS);
   const context = buildContext(topChunks);
-  const suggestions = buildSuggestions(input.question, ranked);
+  const suggestions = buildSuggestions(input.question, ranked, input.excludeSuggestions);
 
   const references = topChunks.slice(0, 3).map((item) => ({
     documentId: item.chunk.documentId,

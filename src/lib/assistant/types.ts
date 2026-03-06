@@ -35,4 +35,5 @@ export type ScopeConstrainedReplyInput = {
   question: string;
   track: LessonTrack;
   locale: "tr" | "en";
+  excludeSuggestions?: string[];
 };

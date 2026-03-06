@@ -16,6 +16,7 @@ const requestSchema = z.object({
   question: z.string().trim().min(3).max(600),
   track: z.nativeEnum(LessonTrack).default(LessonTrack.ENGLISH),
   locale: z.enum(["tr", "en"]).default("tr"),
+  excludeSuggestions: z.array(z.string()).max(50).default([]),
 });
 
 function todayDateString() {
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
           question: parsed.data.question,
           track: parsed.data.track,
           locale: parsed.data.locale,
+          excludeSuggestions: parsed.data.excludeSuggestions,
         });
 
         try {
