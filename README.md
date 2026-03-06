@@ -1,8 +1,12 @@
-# Murebbiye
+# Mürebbiye
 
-Bilingual AI tutoring platform (Turkish/English) powered by AWS Bedrock, deployed on Vercel + AWS.
+**The first free, open-source, Turkish-language AI education platform for primary school children.**
 
-Murebbiye generates personalized lessons from uploaded curriculum documents, provides an interactive student assistant, tracks learning metrics, enforces LLM budget caps, and sends parent summary emails.
+Mürebbiye (مربیه — governess, tutor) prepares Turkish children for an AI future. It bridges the gap between MEB's TYMM curriculum (which starts AI at grade 5) and the reality that children are already interacting with AI daily. Not a replacement for school — a wise companion that walks alongside the child.
+
+**For**: Türk Gençliği — the next generation. **Cost to families**: Zero. Always.
+
+Built with Next.js 15, React 19, Tailwind CSS, Prisma ORM, and AWS Bedrock (Claude Haiku). Generates personalized lessons from curriculum documents, provides an interactive student assistant, tracks learning metrics, enforces LLM budget caps, and sends parent email reports.
 
 ---
 
@@ -448,6 +452,28 @@ Caps reset at the start of each calendar month.
 
 ---
 
+## Roadmap
+
+| Phase | Goal | Status |
+|-------|------|--------|
+| **Phase 0** | Deploy foundation (infrastructure) | Done |
+| **Phase 1** | 30-lesson Turkish AI curriculum (5 units x 6 lessons) | In Progress |
+| **Phase 2** | Interactive exercises (Prompting Playground, Teachable Machine, Robot Oyunu) | Planned |
+| **Phase 3** | Teacher & parent experience (classrooms, assignments, parent portal) | Planned |
+| **Phase 4** | Gamification (badges, XP, leaderboards, certificates) | Planned |
+
+See [docs/project-plan.md](docs/project-plan.md) for the full plan.
+
+---
+
+## Contributing
+
+Contributions are welcome — especially from Turkish-speaking educators and developers. See the roadmap above for what's being worked on.
+
+If you want to help with curriculum content, translations, or unplugged activity guides, open an issue or reach out.
+
+---
+
 ## License
 
-Private project.
+MIT
