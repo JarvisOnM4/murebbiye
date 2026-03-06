@@ -4,7 +4,6 @@ import { auth, signOut } from "@/auth";
 import { getLearnerCookie, verifyLearnerToken, clearLearnerCookie } from "@/lib/learner/token";
 import { prisma } from "@/lib/prisma";
 import { AssistantPanel } from "./assistant-panel";
-import { LessonMediaPanel } from "./lesson-media-panel";
 
 async function resolveStudent(): Promise<{
   id: string;
@@ -12,7 +11,6 @@ async function resolveStudent(): Promise<{
   authMode: "CREDENTIALS" | "LEARNER_TOKEN";
   recoveryCode: string | null;
 } | null> {
-  // Try NextAuth first
   const session = await auth();
   if (session?.user && session.user.role === UserRole.STUDENT) {
     return {
@@ -23,7 +21,6 @@ async function resolveStudent(): Promise<{
     };
   }
 
-  // Try learner cookie
   const cookie = await getLearnerCookie();
   if (!cookie) return null;
 
@@ -37,11 +34,10 @@ async function resolveStudent(): Promise<{
 
   if (!user) return null;
 
-  // Update lastActiveAt
   await prisma.user.update({
     where: { id: user.id },
     data: { lastActiveAt: new Date() },
-  }).catch(() => { /* non-critical */ });
+  }).catch(() => {});
 
   return {
     id: user.id,
@@ -73,38 +69,48 @@ export default async function StudentPage() {
   const displayName = student.nickname || "Öğrenci";
 
   return (
-    <main className="page-wrap">
+    <main className="dark-theme app-wrap">
+      <div className="launch-aurora" aria-hidden="true">
+        <div className="aurora-blob blob-1" />
+        <div className="aurora-blob blob-2" />
+        <div className="aurora-blob blob-3" />
+      </div>
+      <div className="launch-grid-overlay" aria-hidden="true" />
+      <div className="launch-grain" aria-hidden="true" />
+
       <section className="shell">
-        <article className="hero">
-          <span className="label">Student Surface</span>
-          <h1>Hoş geldin, {displayName}!</h1>
-          <p>
-            Bu alan senin öğrenme alanın. Asistan ile soru sorabilir,
-            derslere katılabilirsin.
-          </p>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <form action={handleSignOut}>
-              <button className="btn" type="submit" title="Çıkış yap">
-                Çıkış Yap
-              </button>
-            </form>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+          <h1 style={{
+            margin: 0,
+            fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+            fontSize: "1.3rem",
+            color: "#f0ede6",
+          }}>
+            Merhaba, {displayName}
+          </h1>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
             {student.authMode === "LEARNER_TOKEN" && (
-              <a href="/student/settings" className="btn btn-secondary" title="Ayarlar">
+              <a href="/student/settings" className="launch-link-btn" title="Ayarlar" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}>
                 Ayarlar
               </a>
             )}
+            <form action={handleSignOut}>
+              <button className="launch-link-btn" type="submit" title="Çıkış yap" style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}>
+                Çıkış
+              </button>
+            </form>
           </div>
-          {student.recoveryCode && (
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `try{sessionStorage.setItem("recoveryCode",${JSON.stringify(student.recoveryCode)})}catch(e){}`,
-              }}
-            />
-          )}
-        </article>
+        </div>
 
         <AssistantPanel />
-        <LessonMediaPanel lessonId="demo" />
+
+        {student.recoveryCode && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `try{sessionStorage.setItem("recoveryCode",${JSON.stringify(student.recoveryCode)})}catch(e){}`,
+            }}
+          />
+        )}
       </section>
     </main>
   );

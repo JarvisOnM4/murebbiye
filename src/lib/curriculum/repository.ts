@@ -22,6 +22,7 @@ type CreateDocumentInput = {
   sourceType: CurriculumSourceType
 }
 
+
 function sanitizeFileName(fileName: string) {
   const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, "_")
   return sanitized || "curriculum-file"
@@ -50,7 +51,7 @@ function mapDbDocument(document: CurriculumDocument, chunkCount: number): Curric
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
     chunkCount,
-    track: LessonTrack.ENGLISH,
+    track: document.track,
     sourceType: inferSourceType(document.originalName, document.mimeType)
   }
 }
@@ -115,6 +116,7 @@ export async function createCurriculumDocumentRecord(input: CreateDocumentInput)
       mimeType: input.mimeType,
       storageKey: input.storageKey,
       sourceLanguage: input.sourceLanguage,
+      track: input.track,
       checksum: input.checksum,
       status: DocumentStatus.PROCESSING,
       errorMessage: null
@@ -251,7 +253,7 @@ export async function listReadyCurriculumChunks(limit = 80): Promise<CurriculumC
           {
             id: document.id,
             title: document.title,
-            track: LessonTrack.ENGLISH,
+            track: document.track,
             sourceLanguage: document.sourceLanguage,
             mimeType: document.mimeType,
             originalName: document.originalName,

@@ -1,31 +1,28 @@
 "use client";
 
-import { type FormEvent, useState, useTransition } from "react";
-
-type LessonTrack = "ENGLISH" | "AI_MODULE";
-type SupportedLocale = "tr" | "en";
-type AssistantScopeStatus = "IN_SCOPE" | "OUT_OF_SCOPE";
+import { type FormEvent, useRef, useEffect, useState, useTransition } from "react";
 
 type AssistantReference = {
   documentId: string;
   documentTitle: string;
   chunkOrdinal: number;
   excerpt: string;
-  track: LessonTrack;
+  track: string;
   score: number;
 };
 
 type ScopeReply = {
-  status: AssistantScopeStatus;
+  status: "IN_SCOPE" | "OUT_OF_SCOPE";
   answer: string;
   references: AssistantReference[];
+  suggestions: string[];
   redirect: {
-    recommendedAction: "RETURN_TO_CURRICULUM";
+    recommendedAction: string;
     suggestedPrompt: string;
   };
   guardrail: {
-    sourcePolicy: "curriculum_only";
-    track: LessonTrack;
+    sourcePolicy: string;
+    track: string;
     matchedTokenCount: number;
     scannedChunks: number;
   };
@@ -36,156 +33,176 @@ type AssistantResponse = {
   errors?: string[];
 };
 
-function statusClass(status: AssistantScopeStatus) {
-  if (status === "IN_SCOPE") {
-    return "status-pill status-ready";
-  }
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  suggestions?: string[];
+  outOfScope?: boolean;
+};
 
-  return "status-pill status-failed";
-}
+const WELCOME_SUGGESTIONS = [
+  "Prompt nedir?",
+  "Atatürk kimdir?",
+  "İyi bir prompt nasıl yazılır?",
+  "Yapay zeka yanılabilir mi?",
+];
 
 export function AssistantPanel() {
-  const [question, setQuestion] = useState("");
-  const [track, setTrack] = useState<LessonTrack>("ENGLISH");
-  const [locale, setLocale] = useState<SupportedLocale>("tr");
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [feedbackType, setFeedbackType] = useState<"ok" | "error">("ok");
-  const [reply, setReply] = useState<ScopeReply | null>(null);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content: "Merhaba! Yapay zeka hakkında birlikte keşif yapalım. Aşağıdaki konulardan birini seç ya da kendi sorunu yaz!",
+      suggestions: WELCOME_SUGGESTIONS,
+    },
+  ]);
+  const [input, setInput] = useState("");
   const [isPending, startTransition] = useTransition();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    if (!question.trim()) {
-      setFeedback("Lutfen bir soru yazin. / Please enter a question.");
-      setFeedbackType("error");
-      return;
-    }
+  function sendQuestion(question: string) {
+    if (!question.trim() || isPending) return;
+
+    const userMsg: Message = {
+      id: `u-${Date.now()}`,
+      role: "user",
+      content: question.trim(),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
 
     startTransition(() => {
       void (async () => {
-        const response = await fetch("/api/student/assistant/respond", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            question: question.trim(),
-            track,
-            locale
-          }),
-          credentials: "same-origin"
-        });
+        try {
+          const response = await fetch("/api/student/assistant/respond", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              question: question.trim(),
+              track: "AI_MODULE",
+              locale: "tr",
+            }),
+            credentials: "same-origin",
+          });
 
-        const payload = (await response.json()) as AssistantResponse;
+          const payload = (await response.json()) as AssistantResponse;
 
-        if (!response.ok || !payload.reply) {
-          setFeedback(payload.errors?.join(" ") || "Assistant request failed.");
-          setFeedbackType("error");
-          setReply(null);
-          return;
+          if (!response.ok || !payload.reply) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `a-${Date.now()}`,
+                role: "assistant",
+                content: payload.errors?.[0] || "Bir hata oluştu. Tekrar dene.",
+              },
+            ]);
+            return;
+          }
+
+          const reply = payload.reply;
+          const assistantMsg: Message = {
+            id: `a-${Date.now()}`,
+            role: "assistant",
+            content: reply.answer,
+            suggestions: reply.suggestions.length > 0 ? reply.suggestions : undefined,
+            outOfScope: reply.status === "OUT_OF_SCOPE",
+          };
+
+          setMessages((prev) => [...prev, assistantMsg]);
+        } catch {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `a-${Date.now()}`,
+              role: "assistant",
+              content: "Bağlantı hatası. Tekrar dene.",
+            },
+          ]);
         }
-
-        setReply(payload.reply);
-        setFeedback(
-          payload.reply.status === "IN_SCOPE"
-            ? "Yanit mufredat kapsaminda. / Response is within curriculum scope."
-            : "Soru kapsam disi algilandi ve ders baglamina yonlendirildi. / Out-of-scope question redirected to curriculum context."
-        );
-        setFeedbackType(payload.reply.status === "IN_SCOPE" ? "ok" : "error");
       })();
     });
   }
 
+  function handleSubmit(event?: FormEvent) {
+    event?.preventDefault();
+    sendQuestion(input);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  }
+
+  function handleSuggestionClick(suggestion: string) {
+    sendQuestion(suggestion);
+  }
+
   return (
-    <section className="card assistant-panel">
-      <h2>Scope-Constrained Assistant</h2>
-      <p className="assistant-note">
-        Assistant sadece yuklu mufredat iceriginden yanit verir. The assistant answers only
-        from uploaded curriculum and AI module content.
-      </p>
-
-      <form className="assistant-form" onSubmit={handleSubmit}>
-        <div className="form-row">
-          <div className="field">
-            <label htmlFor="assistant-track">Track</label>
-            <select
-              id="assistant-track"
-              value={track}
-              onChange={(event) => setTrack(event.target.value as LessonTrack)}
+    <section className="chat-panel">
+      <div className="chat-messages">
+        {messages.map((msg) => (
+          <div key={msg.id}>
+            <div
+              className={`chat-bubble ${msg.role === "user" ? "chat-user" : "chat-assistant"}`}
             >
-              <option value="ENGLISH">ENGLISH</option>
-              <option value="AI_MODULE">AI_MODULE</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label htmlFor="assistant-locale">Locale</label>
-            <select
-              id="assistant-locale"
-              value={locale}
-              onChange={(event) => setLocale(event.target.value as SupportedLocale)}
-            >
-              <option value="tr">TR</option>
-              <option value="en">EN</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="field">
-          <label htmlFor="assistant-question">Question</label>
-          <textarea
-            id="assistant-question"
-            className="assistant-textarea"
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            maxLength={600}
-            placeholder="Ornek / Example: Present simple ile gunluk rutin nasil anlatilir?"
-          />
-        </div>
-
-        <button className="btn" type="submit" disabled={isPending}>
-          {isPending ? "Yanitlaniyor... / Responding..." : "Ask Assistant"}
-        </button>
-      </form>
-
-      {feedback ? (
-        <p className={feedbackType === "error" ? "warn" : "success-text"}>{feedback}</p>
-      ) : null}
-
-      {reply ? (
-        <article className="assistant-result">
-          <div className="assistant-result-head">
-            <strong>Assistant Response</strong>
-            <span className={statusClass(reply.status)}>{reply.status}</span>
-          </div>
-
-          <p className="assistant-answer">{reply.answer}</p>
-          <p>
-            Suggested return prompt: <span className="mono">{reply.redirect.suggestedPrompt}</span>
-          </p>
-          <p className="mono">
-            Guardrail: policy={reply.guardrail.sourcePolicy} track={reply.guardrail.track} matches=
-            {reply.guardrail.matchedTokenCount} scanned={reply.guardrail.scannedChunks}
-          </p>
-
-          <div className="assistant-references">
-            <h3>References</h3>
-            {reply.references.length === 0 ? (
-              <p>No direct chunk match. Ask a question tied to uploaded content.</p>
-            ) : (
-              reply.references.map((reference) => (
-                <div className="assistant-reference" key={`${reference.documentId}-${reference.chunkOrdinal}`}>
-                  <p className="mono">
-                    {reference.documentTitle} / chunk {reference.chunkOrdinal} / score {reference.score}
-                  </p>
-                  <p>{reference.excerpt}</p>
-                </div>
-              ))
+              <p className="chat-text">{msg.content}</p>
+            </div>
+            {msg.suggestions && msg.suggestions.length > 0 && (
+              <div className="chat-suggestions">
+                {msg.suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    className="chat-suggestion"
+                    onClick={() => handleSuggestionClick(s)}
+                    disabled={isPending}
+                    title={s}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-        </article>
-      ) : null}
+        ))}
+        {isPending && (
+          <div className="chat-bubble chat-assistant">
+            <p className="chat-text chat-typing">Düşünüyorum...</p>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <form className="chat-input-bar" onSubmit={handleSubmit}>
+        <textarea
+          className="chat-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Bir soru sor..."
+          rows={1}
+          maxLength={600}
+          disabled={isPending}
+        />
+        <button
+          className="chat-send"
+          type="submit"
+          disabled={isPending || !input.trim()}
+          title="Gönder"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
+        </button>
+      </form>
     </section>
   );
 }

@@ -51,17 +51,9 @@ export async function middleware(request: NextRequest) {
   const isProtectedPath = isAdminPath || isStudentPath;
   const isLoginPath = pathname === LOGIN_PATH;
 
-  // Admin paths — require NextAuth JWT with ADMIN role (unchanged)
+  // Admin paths — disabled for production, redirect to home
   if (isAdminPath) {
-    if (!token || token.role !== "ADMIN") {
-      const loginUrl = new URL(LOGIN_PATH, request.url);
-      loginUrl.searchParams.set(
-        "callbackUrl",
-        `${request.nextUrl.pathname}${request.nextUrl.search}`
-      );
-      return NextResponse.redirect(loginUrl);
-    }
-    return NextResponse.next();
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Student paths — accept NextAuth JWT (STUDENT) OR valid learner cookie
@@ -79,11 +71,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Login path — redirect authenticated users to their dashboard
-  if (isLoginPath && token) {
-    return NextResponse.redirect(
-      new URL(dashboardForRole(token.role as string), request.url)
-    );
+  // Login path — disabled for production, redirect to home
+  if (isLoginPath) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Non-admin, non-student protected paths (future-proof)

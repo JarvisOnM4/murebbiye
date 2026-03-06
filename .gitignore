@@ -24,6 +24,7 @@ prisma/dev.db
 prisma/dev.db-journal
 
 /storage/
+.local-storage/
 .vercel
 
 # GoDaddy exports (contain session data)

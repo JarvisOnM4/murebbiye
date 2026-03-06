@@ -22,6 +22,7 @@ export type ScopeConstrainedReply = {
   status: AssistantScopeStatus;
   answer: string;
   references: AssistantReference[];
+  suggestions: string[];
   redirect: {
     recommendedAction: "RETURN_TO_CURRICULUM";
     suggestedPrompt: string;

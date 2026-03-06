@@ -1,5 +1,6 @@
 import { listReadyCurriculumChunks } from "@/lib/curriculum/repository";
 import type { CurriculumChunkContext } from "@/lib/curriculum/types";
+import { callLlm } from "@/lib/media-agent/llm";
 import type {
   AssistantReference,
   ScopeConstrainedReply,
@@ -13,65 +14,36 @@ type ScoredChunk = {
 };
 
 const MAX_CHUNK_SCAN = 160;
-const MAX_REFERENCES = 3;
-const MIN_MATCHED_TOKENS = 2;
-const MIN_SCOPE_SCORE = 6;
+const MAX_CONTEXT_CHUNKS = 5;
+const MIN_MATCHED_TOKENS = 1;
+const MIN_SCOPE_SCORE = 3;
 
 const STOP_WORDS = new Set([
-  "the",
-  "and",
-  "for",
-  "from",
-  "that",
-  "this",
-  "with",
-  "have",
-  "your",
-  "what",
-  "when",
-  "where",
-  "which",
-  "about",
-  "into",
-  "a",
-  "an",
-  "to",
-  "of",
-  "in",
-  "on",
-  "is",
-  "are",
-  "be",
-  "can",
-  "will",
-  "how",
-  "why",
-  "bu",
-  "ve",
-  "icin",
-  "ile",
-  "bir",
-  "ne",
-  "neden",
-  "nasil",
-  "hangi",
-  "olan",
-  "gibi",
-  "ama",
-  "daha",
-  "olan",
-  "mi",
-  "mu",
-  "midir",
-  "midir",
-  "icin",
-  "kadar",
-  "gore",
-  "gorev",
-  "ders",
-  "lesson",
-  "track"
+  "the", "and", "for", "from", "that", "this", "with", "have", "your",
+  "what", "when", "where", "which", "about", "into", "a", "an", "to",
+  "of", "in", "on", "is", "are", "be", "can", "will", "how", "why",
+  "bu", "ve", "icin", "ile", "bir", "ne", "neden", "nasil", "hangi",
+  "olan", "gibi", "ama", "daha", "mi", "mu", "midir", "kadar", "gore",
+  "gorev", "ders", "lesson", "track"
 ]);
+
+const DEFAULT_SUGGESTIONS = [
+  "Prompt nedir?",
+  "Chatbot'a nasıl soru sorulur?",
+  "Atatürk kimdir?",
+  "Yapay zeka yanılabilir mi?",
+];
+
+const SYSTEM_PROMPT = `Sen Mürebbiye — 8-14 yaş çocukları için yapay zeka eğitim asistanı.
+
+KESİN KURALLAR:
+- MAX 3-4 cümle. Kısa, net, sohbet gibi. Asla uzun paragraflar yazma.
+- Bir ana fikir ver, bir örnek ver, bir sonraki soru öner. Bu kadar.
+- Müfredat dışı konulara cevap verme — nazikçe konuyu geri getir.
+- Türkçe yaz, İngilizce terimleri parantez içinde ekle.
+- Sıcak ve meraklı ol ama kısa kes. Çocuğun dikkatini kaybetme.
+- Her cevabın sonunda çocuğu yönlendiren tek bir soru sor.
+- Emoji az kullan, sadece vurgu için.`;
 
 function normalizeText(value: string) {
   return value
@@ -88,11 +60,7 @@ function normalizeText(value: string) {
 
 function clip(value: string, maxLength = 180) {
   const compact = value.replace(/\s+/g, " ").trim();
-
-  if (compact.length <= maxLength) {
-    return compact;
-  }
-
+  if (compact.length <= maxLength) return compact;
   return `${compact.slice(0, maxLength - 3).trim()}...`;
 }
 
@@ -105,40 +73,23 @@ function tokenize(value: string) {
 
 function buildBigrams(tokens: string[]) {
   const bigrams: string[] = [];
-
-  for (let index = 0; index < tokens.length - 1; index += 1) {
-    bigrams.push(`${tokens[index]} ${tokens[index + 1]}`);
+  for (let i = 0; i < tokens.length - 1; i++) {
+    bigrams.push(`${tokens[i]} ${tokens[i + 1]}`);
   }
-
   return bigrams;
 }
 
 function scoreChunk(questionTokens: string[], questionBigrams: string[], chunk: CurriculumChunkContext) {
   const haystack = normalizeText(chunk.content);
-
   let matchedTokens = 0;
-
   for (const token of questionTokens) {
-    if (haystack.includes(token)) {
-      matchedTokens += 1;
-    }
+    if (haystack.includes(token)) matchedTokens += 1;
   }
-
   let bigramHits = 0;
-
   for (const bigram of questionBigrams) {
-    if (haystack.includes(bigram)) {
-      bigramHits += 1;
-    }
+    if (haystack.includes(bigram)) bigramHits += 1;
   }
-
-  const score = matchedTokens * 3 + bigramHits * 2;
-
-  return {
-    chunk,
-    score,
-    matchedTokens
-  };
+  return { chunk, score: matchedTokens * 3 + bigramHits * 2, matchedTokens };
 }
 
 function toReference(item: ScoredChunk): AssistantReference {
@@ -152,38 +103,86 @@ function toReference(item: ScoredChunk): AssistantReference {
   };
 }
 
-function inScopeAnswer(locale: "tr" | "en", references: AssistantReference[]) {
-  const points = references.map((item, index) => `${index + 1}) ${item.excerpt}`);
-
-  if (locale === "tr") {
-    return `Sorunu yalnizca yuklu mufredat iceriginden yanitliyorum:\n${points.join("\n")}`;
-  }
-
-  return `Answering only from uploaded curriculum content:\n${points.join("\n")}`;
+/**
+ * Strip internal structural markers from curriculum text.
+ * These are lesson authoring artifacts, not student-facing content.
+ */
+function stripStructural(text: string): string {
+  return text
+    // Remove structural headings
+    .replace(/^#{1,4}\s+(Unite|Ders|Gorev|Konu Ozeti|Isinma Etkinligi|Hikaye|Aciklama|Uygulama|Bagimsiz Gorev|Dusunme ve Tartisma|Anahtar Kavramlar|Fissizden|Turkce'de Prompt).*$/gm, "")
+    // Remove heading markers
+    .replace(/^#{1,4}\s+/gm, "")
+    // Remove time markers like "(5 dakika)"
+    .replace(/\(\d+\s*dakika\)/g, "")
+    // Remove task labels like "Gorev 1 —", "Adim 1:"
+    .replace(/^(Gorev|Adim|Ornek)\s*\d*\s*[—:\-]\s*/gm, "")
+    // Remove markdown bold
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    // Collapse extra whitespace
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
-function outOfScopeAnswer(locale: "tr" | "en") {
-  if (locale === "tr") {
-    return "Bu soru secilen ders izindeki yuklu mufredatla eslesmiyor. Yalnizca mufredat ve AI modulu icerigine dayali yanit verebilirim.";
-  }
-
-  return "This question does not match the uploaded content for the selected track. I can only answer from curriculum and AI module content.";
+/**
+ * Build context string from top-matching chunks for the LLM prompt.
+ */
+function buildContext(chunks: ScoredChunk[]): string {
+  return chunks
+    .map((c) => stripStructural(c.chunk.content))
+    .filter((text) => text.length > 20)
+    .join("\n\n---\n\n");
 }
 
-function suggestedPrompt(locale: "tr" | "en", references: AssistantReference[]) {
-  const anchor = references[0]?.excerpt;
+/**
+ * Generate follow-up suggestions based on the question and curriculum.
+ */
+function buildSuggestions(question: string, ranked: ScoredChunk[]): string[] {
+  const suggestions: string[] = [];
+  const normalizedQ = normalizeText(question);
 
-  if (!anchor) {
-    return locale === "tr"
-      ? "Yuklu mufredattaki bir kavrami sec ve onu aciklamami iste."
-      : "Pick one concept from the uploaded curriculum and ask me to explain it.";
+  const TOPIC_QUESTIONS: Record<string, string[]> = {
+    prompt: ["Kötü prompt ile iyi prompt farkı ne?", "Bana bir prompt örneği göster"],
+    chatbot: ["Elif'in chatbot hikayesini anlat", "Chatbot nasıl düşünür?"],
+    halusinasyon: ["Yapay zeka neden bazen yanlış söyler?", "Chatbot'un söylediğini nasıl kontrol ederiz?"],
+    robot: ["Taklit Robotu oyunu nasıl oynanır?", "Robot neden belirsiz komutu anlamaz?"],
+    deprem: ["Deprem hakkında adım adım prompt nasıl yazılır?"],
+    rol: ["Chatbot'a rol vermek ne demek?"],
+    elestir: ["Yapay zekanın söylediğini nasıl kontrol ederiz?"],
+    yemek: ["Elif chatbot'tan nasıl tarif aldı?"],
+    bilgi: ["Prompt yazarken nelere dikkat etmeliyim?"],
+    ataturk: ["Atatürk Çanakkale'de ne yaptı?", "Atatürk'ün reformları nelerdir?"],
+    cumhuriyet: ["Cumhuriyet nasıl kuruldu?", "Atatürk'ün dış politika ilkesi nedir?"],
+    kurtulus: ["Kurtuluş Savaşı nasıl kazanıldı?", "Büyük Taarruz'u anlat"],
+    nutuk: ["Nutuk nedir?", "Gençliğe Hitabe ne söyler?"],
+  };
+
+  // Add suggestions from matched content
+  for (const item of ranked.slice(0, 5)) {
+    const normalized = normalizeText(item.chunk.content);
+    for (const [keyword, questions] of Object.entries(TOPIC_QUESTIONS)) {
+      if (normalized.includes(keyword) && !normalizedQ.includes(keyword)) {
+        for (const q of questions) {
+          if (suggestions.length >= 3) break;
+          if (!suggestions.includes(q)) suggestions.push(q);
+        }
+      }
+    }
+    if (suggestions.length >= 3) break;
   }
 
-  if (locale === "tr") {
-    return `"${clip(anchor, 80)}" fikrini adim adim aciklar misin?`;
+  // Fallbacks
+  const fallbacks = [
+    "Yapay zeka ile neler yapılabilir?",
+    "İyi bir prompt nasıl yazılır?",
+    "Elif'in chatbot hikayesi ne anlatıyor?",
+  ];
+  for (const fb of fallbacks) {
+    if (suggestions.length >= 3) break;
+    if (!suggestions.includes(fb)) suggestions.push(fb);
   }
 
-  return `Can you explain "${clip(anchor, 80)}" step by step?`;
+  return suggestions.slice(0, 3);
 }
 
 export async function respondWithScopeGuard(
@@ -202,27 +201,10 @@ export async function respondWithScopeGuard(
   const questionTokens = [...new Set(tokenize(input.question))];
   const questionBigrams = buildBigrams(questionTokens);
 
-  if (questionTokens.length === 0) {
-    return {
-      status: "OUT_OF_SCOPE",
-      answer: outOfScopeAnswer(input.locale),
-      references: [],
-      redirect: {
-        recommendedAction: "RETURN_TO_CURRICULUM",
-        suggestedPrompt: suggestedPrompt(input.locale, [])
-      },
-      guardrail: {
-        sourcePolicy: "curriculum_only",
-        track: input.track,
-        matchedTokenCount: 0,
-        scannedChunks: sources.length
-      }
-    };
-  }
-
+  // Score all chunks
   const ranked = sources
     .map((chunk) => scoreChunk(questionTokens, questionBigrams, chunk))
-    .sort((left, right) => right.score - left.score || right.chunk.chunkOrdinal - left.chunk.chunkOrdinal);
+    .sort((a, b) => b.score - a.score || b.chunk.chunkOrdinal - a.chunk.chunkOrdinal);
 
   const best = ranked[0];
   const matchedTokenCount = best?.matchedTokens ?? 0;
@@ -230,16 +212,16 @@ export async function respondWithScopeGuard(
     best && best.matchedTokens >= MIN_MATCHED_TOKENS && best.score >= MIN_SCOPE_SCORE
   );
 
-  if (!isInScope) {
-    const redirectReferences = ranked.filter((item) => item.score > 0).slice(0, 1).map(toReference);
-
+  // Out of scope — no LLM call needed
+  if (!isInScope || questionTokens.length === 0) {
     return {
       status: "OUT_OF_SCOPE",
-      answer: outOfScopeAnswer(input.locale),
-      references: redirectReferences,
+      answer: "Bu konuda henüz bir dersimiz yok ama aşağıdaki konuları birlikte keşfedebiliriz!",
+      references: [],
+      suggestions: DEFAULT_SUGGESTIONS,
       redirect: {
         recommendedAction: "RETURN_TO_CURRICULUM",
-        suggestedPrompt: suggestedPrompt(input.locale, redirectReferences)
+        suggestedPrompt: "Müfredattaki bir konuyu seç ve sormayı dene."
       },
       guardrail: {
         sourcePolicy: "curriculum_only",
@@ -250,18 +232,43 @@ export async function respondWithScopeGuard(
     };
   }
 
-  const references = ranked
-    .filter((item) => item.score > 0)
-    .slice(0, MAX_REFERENCES)
-    .map(toReference);
+  // In scope — use LLM to generate a conversational response
+  const topChunks = ranked.filter((c) => c.score > 0).slice(0, MAX_CONTEXT_CHUNKS);
+  const references = topChunks.slice(0, 3).map(toReference);
+  const context = buildContext(topChunks);
+
+  let answer: string;
+  try {
+    const llmResult = await callLlm({
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: `MÜFREDAT İÇERİĞİ:\n${context}\n\n---\n\nÖĞRENCİ SORUSU: ${input.question}`
+        },
+      ],
+      maxTokens: 200,
+      temperature: 0.7,
+    });
+    answer = llmResult.content;
+  } catch (err) {
+    // LLM failed — fall back to clean excerpt
+    answer = topChunks
+      .slice(0, 2)
+      .map((c) => clip(c.chunk.content, 300))
+      .join("\n\n");
+  }
+
+  const suggestions = buildSuggestions(input.question, ranked);
 
   return {
     status: "IN_SCOPE",
-    answer: inScopeAnswer(input.locale, references),
+    answer,
     references,
+    suggestions,
     redirect: {
       recommendedAction: "RETURN_TO_CURRICULUM",
-      suggestedPrompt: suggestedPrompt(input.locale, references)
+      suggestedPrompt: suggestions[0] ?? "Başka ne merak ediyorsun?"
     },
     guardrail: {
       sourcePolicy: "curriculum_only",

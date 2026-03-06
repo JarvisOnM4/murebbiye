@@ -84,17 +84,24 @@ Every lesson has an unplugged alternative for schools without devices:
 ### Phase 0: Deploy Foundation (Infrastructure)
 **Goal**: Get the existing mürebbiye platform live.
 
-| Task | Details | Depends On |
-|---|---|---|
-| Deploy AWS CDK stack | RDS + S3 + IAM via `infra/` | AWS account |
-| Purchase domain | murebbiye.org or murebbiye.com.tr | Budget decision |
-| Configure SMTP | SES or alternative for parent emails | AWS setup |
-| Request Bedrock model access | Claude 3.5 Haiku in us-east-1 | IAM user |
-| Configure Vercel deployment | Connect repo, set env vars | Domain |
-| Seed admin user | Via `npm run db:seed` | RDS deployed |
-| Smoke test all existing features | Curriculum upload, lesson gen, assistant, media agent | All above |
+**Status update (2026-03-06)**: AWS account is on hold (case 177279662500027). LLM provider abstracted to support both Bedrock and OpenRouter. OpenRouter is the active provider during AWS hold. Local dev can proceed fully with Docker PostgreSQL + OpenRouter. Production deployment (Vercel + RDS) blocked until AWS resolves.
+
+| Task | Details | Depends On | Status |
+|---|---|---|---|
+| GitHub repo public | MIT license, README, topics | — | Done |
+| LLM provider abstraction | `llm.ts` supports bedrock + openrouter via `PRIMARY_MODEL_PROVIDER` env var | — | Done |
+| Deploy AWS CDK stack | RDS + S3 + IAM via `infra/` | AWS account hold resolved | Blocked |
+| Purchase domain | murebbiye.org — deferred until first revenue | Budget decision | Deferred |
+| Configure SMTP | SES or alternative for parent emails | AWS setup | Blocked |
+| Request Bedrock model access | Claude 3.5 Haiku in us-east-1 | IAM user | Blocked (but not needed — OpenRouter available) |
+| Configure Vercel deployment | Connect repo, set env vars | Domain + RDS | Blocked |
+| Local dev environment | Docker PostgreSQL + OpenRouter API key + seed users | OpenRouter credits | Ready |
+| Seed admin user | Via `npm run db:seed` | Local DB or RDS | Ready |
+| Smoke test all existing features | Curriculum upload, lesson gen, assistant, media agent | Local dev env | Next |
 
 **Exit criteria**: Admin can upload a document, generate a lesson, student can take it, parent gets email report.
+
+**Parallel path**: Phase 1 curriculum content creation can proceed NOW using local dev + OpenRouter, while waiting for AWS to unblock production deployment.
 
 ---
 
@@ -191,7 +198,7 @@ The existing mürebbiye architecture is solid and well-suited for Phase 0-1:
 
 - **Next.js 15 App Router** — no change
 - **Prisma + PostgreSQL** — no change, just add models
-- **LLM via Zeus Gateway** — no change (curriculum generation + student assistant)
+- **LLM via provider abstraction** — `callLlm()` routes to Bedrock or OpenRouter based on `PRIMARY_MODEL_PROVIDER` env var. Currently using OpenRouter (`qwen/qwen3-235b-a22b-2507`). Switch back to Bedrock when AWS resumes.
 - **Media Agent** — no change (generates lesson visuals)
 - **Budget tracking** — no change (guards LLM spend)
 - **Auth (NextAuth v5)** — extend with TEACHER role, no replace

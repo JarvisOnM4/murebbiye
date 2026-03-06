@@ -3,11 +3,17 @@ import {
   PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3"
+import fs from "node:fs/promises"
 import path from "path"
 
-const client = new S3Client({
-  region: process.env.AWS_REGION ?? "us-east-1"
-})
+const useLocalStorage =
+  process.env.NODE_ENV === "development" && !process.env.S3_BUCKET_NAME
+
+const LOCAL_STORAGE_DIR = path.join(process.cwd(), ".local-storage")
+
+const client = useLocalStorage
+  ? (null as unknown as S3Client)
+  : new S3Client({ region: process.env.AWS_REGION ?? "us-east-1" })
 
 function bucketName(): string {
   const name = process.env.S3_BUCKET_NAME
@@ -42,6 +48,14 @@ export async function uploadToS3(
   contentType: string
 ): Promise<void> {
   const safeKey = sanitizeKey(key)
+
+  if (useLocalStorage) {
+    const filePath = path.join(LOCAL_STORAGE_DIR, safeKey)
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, body)
+    return
+  }
+
   await client.send(
     new PutObjectCommand({
       Bucket: bucketName(),
@@ -54,6 +68,12 @@ export async function uploadToS3(
 
 export async function downloadFromS3(key: string): Promise<Buffer> {
   const safeKey = sanitizeKey(key)
+
+  if (useLocalStorage) {
+    const filePath = path.join(LOCAL_STORAGE_DIR, safeKey)
+    return fs.readFile(filePath)
+  }
+
   const response = await client.send(
     new GetObjectCommand({
       Bucket: bucketName(),

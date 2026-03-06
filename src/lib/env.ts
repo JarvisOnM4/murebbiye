@@ -19,10 +19,14 @@ const envSchema = z.object({
   SMTP_FROM: z.string().optional(),
   AWS_REGION: z.string().default("us-east-1"),
   BEDROCK_REGION: z.string().default("us-west-2"),
-  AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  AWS_ACCESS_KEY_ID: z.string().min(1).optional().or(z.literal("")),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional().or(z.literal("")),
   S3_BUCKET_NAME: z.string().min(1).optional(),
   BEDROCK_MODEL_ID: z.string().optional(),
+  PRIMARY_MODEL_PROVIDER: z.enum(["bedrock", "openrouter"]).default("bedrock"),
+  PRIMARY_MODEL_NAME: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
+  OPENROUTER_BASE_URL: z.string().url().optional(),
 });
 
 export const env = envSchema.parse({
@@ -49,4 +53,8 @@ export const env = envSchema.parse({
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
   BEDROCK_MODEL_ID: process.env.BEDROCK_MODEL_ID,
+  PRIMARY_MODEL_PROVIDER: process.env.PRIMARY_MODEL_PROVIDER,
+  PRIMARY_MODEL_NAME: process.env.PRIMARY_MODEL_NAME,
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+  OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL,
 });
