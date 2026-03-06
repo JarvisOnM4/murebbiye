@@ -61,6 +61,9 @@ export async function checkRateLimit(
   const client = getRedis();
 
   if (!client) {
+    if (process.env.NODE_ENV === "production") {
+      console.warn("[SECURITY] Rate limiter running in-memory mode — Redis not configured");
+    }
     return checkMemoryRateLimit(key, maxRequests, windowSeconds);
   }
 

@@ -208,6 +208,16 @@ const TOPIC_QUESTIONS: Record<string, string[]> = {
 
 const ALL_SUGGESTIONS = Object.values(TOPIC_QUESTIONS).flat();
 
+function sanitizeStudentInput(question: string): string {
+  return question
+    .replace(/<\/?[a-z_]+>/gi, "")
+    .replace(/ignore\s+(all\s+)?previous\s+instructions/gi, "")
+    .replace(/you\s+are\s+now/gi, "")
+    .replace(/system\s*:\s*/gi, "")
+    .replace(/```[\s\S]*?```/g, "")
+    .slice(0, 600);
+}
+
 function buildSuggestions(
   question: string,
   ranked: ScoredChunk[],
@@ -317,24 +327,21 @@ export async function streamWithScopeGuard(
   const suggestions = buildSuggestions(input.question, ranked, input.excludeSuggestions);
 
   const references = topChunks.slice(0, 3).map((item) => ({
-    documentId: item.chunk.documentId,
     documentTitle: item.chunk.documentTitle,
-    chunkOrdinal: item.chunk.chunkOrdinal,
     excerpt: clip(item.chunk.content),
-    track: item.chunk.track,
-    score: item.score,
   }));
 
   const guardrail = {
     sourcePolicy: "curriculum_only",
     track: input.track,
-    matchedTokenCount,
-    scannedChunks: sources.length,
   };
 
   const baseUrl =
     process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
-  const apiKey = process.env.OPENROUTER_API_KEY ?? "";
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is not configured");
+  }
   const model =
     process.env.PRIMARY_MODEL_NAME ?? "qwen/qwen3-235b-a22b-2507";
 
@@ -350,7 +357,7 @@ export async function streamWithScopeGuard(
         { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
-          content: `MÜFREDAT İÇERİĞİ:\n${context}\n\n---\n\n<student_question>\n${input.question}\n</student_question>`,
+          content: `MÜFREDAT İÇERİĞİ:\n${context}\n\n---\n\n<student_question>\n${sanitizeStudentInput(input.question)}\n</student_question>`,
         },
       ],
       max_tokens: 200,
@@ -372,7 +379,7 @@ export async function streamWithScopeGuard(
         controller.enqueue(
           encoder.encode(
             sseEvent("done", {
-              status: "IN_SCOPE",
+              status: "FALLBACK",
               suggestions,
               references,
               guardrail,

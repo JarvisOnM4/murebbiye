@@ -138,6 +138,16 @@ function buildContext(chunks: ScoredChunk[]): string {
 /**
  * Generate follow-up suggestions based on the question and curriculum.
  */
+function sanitizeStudentInput(question: string): string {
+  return question
+    .replace(/<\/?[a-z_]+>/gi, "")
+    .replace(/ignore\s+(all\s+)?previous\s+instructions/gi, "")
+    .replace(/you\s+are\s+now/gi, "")
+    .replace(/system\s*:\s*/gi, "")
+    .replace(/```[\s\S]*?```/g, "")
+    .slice(0, 600);
+}
+
 function buildSuggestions(question: string, ranked: ScoredChunk[]): string[] {
   const suggestions: string[] = [];
   const normalizedQ = normalizeText(question);
@@ -184,6 +194,15 @@ function buildSuggestions(question: string, ranked: ScoredChunk[]): string[] {
   }
 
   return suggestions.slice(0, 3);
+}
+
+const UNSAFE_PATTERNS = [
+  /\b(porn|sex(?:ual)?|violence|kill(?:ing)?|suicide|drug|weapon|murder|rape)\b/i,
+  /\b(küfür|seks|silah|uyuşturucu|intihar|öldür|tecavüz|şiddet)\b/i,
+];
+
+function isResponseSafe(text: string): boolean {
+  return !UNSAFE_PATTERNS.some((p) => p.test(text));
 }
 
 export async function respondWithScopeGuard(
@@ -245,13 +264,16 @@ export async function respondWithScopeGuard(
         { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
-          content: `MÜFREDAT İÇERİĞİ:\n${context}\n\n---\n\n<student_question>\n${input.question}\n</student_question>`
+          content: `MÜFREDAT İÇERİĞİ:\n${context}\n\n---\n\n<student_question>\n${sanitizeStudentInput(input.question)}\n</student_question>`
         },
       ],
       maxTokens: 200,
       temperature: 0.7,
     });
     answer = llmResult.content;
+    if (!isResponseSafe(answer)) {
+      answer = "Bu konuda sana yardımcı olamam. Müfredat konularını sormayı dene!";
+    }
   } catch (err) {
     // LLM failed — fall back to clean excerpt
     answer = topChunks

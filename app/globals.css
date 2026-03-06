@@ -1406,6 +1406,15 @@ a {
   height: 520px;
 }
 
+.chat-ai-disclosure {
+  font-size: 0.72rem;
+  color: #6a6a7a;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.01);
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;

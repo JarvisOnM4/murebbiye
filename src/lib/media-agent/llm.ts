@@ -72,7 +72,10 @@ export function computeCost(model: string, tokensIn: number, tokensOut: number):
 
 async function callOpenRouter(input: LlmCallInput, model: string): Promise<LlmCallOutput> {
   const baseUrl = process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1"
-  const apiKey = process.env.OPENROUTER_API_KEY ?? ""
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is not configured")
+  }
 
   const messages = input.messages.map((m) => ({
     role: m.role,

@@ -241,6 +241,9 @@ export function AssistantPanel() {
 
   return (
     <section className="chat-panel">
+      <div className="chat-ai-disclosure">
+        🤖 Bu asistan yapay zeka ile desteklenmektedir. Cevaplar otomatik üretilir ve hata içerebilir.
+      </div>
       <div className="chat-messages">
         {messages.map((msg, idx) => {
           const isLastAssistant =
