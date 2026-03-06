@@ -1,37 +1,6 @@
 "use client";
 
-import { type FormEvent, useRef, useEffect, useState, useTransition } from "react";
-
-type AssistantReference = {
-  documentId: string;
-  documentTitle: string;
-  chunkOrdinal: number;
-  excerpt: string;
-  track: string;
-  score: number;
-};
-
-type ScopeReply = {
-  status: "IN_SCOPE" | "OUT_OF_SCOPE";
-  answer: string;
-  references: AssistantReference[];
-  suggestions: string[];
-  redirect: {
-    recommendedAction: string;
-    suggestedPrompt: string;
-  };
-  guardrail: {
-    sourcePolicy: string;
-    track: string;
-    matchedTokenCount: number;
-    scannedChunks: number;
-  };
-};
-
-type AssistantResponse = {
-  reply?: ScopeReply;
-  errors?: string[];
-};
+import { type FormEvent, useRef, useEffect, useState, useCallback } from "react";
 
 type Message = {
   id: string;
@@ -39,6 +8,7 @@ type Message = {
   content: string;
   suggestions?: string[];
   outOfScope?: boolean;
+  streaming?: boolean;
 };
 
 const WELCOME_SUGGESTIONS = [
@@ -53,81 +23,202 @@ export function AssistantPanel() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Merhaba! Yapay zeka hakkında birlikte keşif yapalım. Aşağıdaki konulardan birini seç ya da kendi sorunu yaz!",
+      content:
+        "Merhaba! Yapay zeka hakkında birlikte keşif yapalım. Aşağıdaki konulardan birini seç ya da kendi sorunu yaz!",
       suggestions: WELCOME_SUGGESTIONS,
     },
   ]);
   const [input, setInput] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  function sendQuestion(question: string) {
-    if (!question.trim() || isPending) return;
+  const sendQuestion = useCallback(
+    async (question: string) => {
+      if (!question.trim() || isStreaming) return;
 
-    const userMsg: Message = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      content: question.trim(),
-    };
+      const userMsg: Message = {
+        id: `u-${Date.now()}`,
+        role: "user",
+        content: question.trim(),
+      };
 
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
+      const assistantId = `a-${Date.now()}`;
 
-    startTransition(() => {
-      void (async () => {
-        try {
-          const response = await fetch("/api/student/assistant/respond", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              question: question.trim(),
-              track: "AI_MODULE",
-              locale: "tr",
-            }),
-            credentials: "same-origin",
-          });
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        {
+          id: assistantId,
+          role: "assistant",
+          content: "",
+          streaming: true,
+        },
+      ]);
+      setInput("");
+      setIsStreaming(true);
 
-          const payload = (await response.json()) as AssistantResponse;
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-          if (!response.ok || !payload.reply) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `a-${Date.now()}`,
-                role: "assistant",
-                content: payload.errors?.[0] || "Bir hata oluştu. Tekrar dene.",
-              },
-            ]);
-            return;
-          }
+      try {
+        const response = await fetch("/api/student/assistant/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: question.trim(),
+            track: "AI_MODULE",
+            locale: "tr",
+          }),
+          credentials: "same-origin",
+          signal: controller.signal,
+        });
 
-          const reply = payload.reply;
-          const assistantMsg: Message = {
-            id: `a-${Date.now()}`,
-            role: "assistant",
-            content: reply.answer,
-            suggestions: reply.suggestions.length > 0 ? reply.suggestions : undefined,
-            outOfScope: reply.status === "OUT_OF_SCOPE",
-          };
-
-          setMessages((prev) => [...prev, assistantMsg]);
-        } catch {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `a-${Date.now()}`,
-              role: "assistant",
-              content: "Bağlantı hatası. Tekrar dene.",
-            },
-          ]);
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    content:
+                      payload.error ||
+                      payload.errors?.[0] ||
+                      "Bir hata oluştu. Tekrar dene.",
+                    streaming: false,
+                  }
+                : m
+            )
+          );
+          setIsStreaming(false);
+          return;
         }
-      })();
-    });
-  }
+
+        // Check if response is JSON (non-streaming, e.g. quota exceeded)
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.includes("application/json")) {
+          const payload = await response.json();
+          const reply = payload.reply;
+          if (reply) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? {
+                      ...m,
+                      content: reply.answer,
+                      suggestions:
+                        reply.suggestions?.length > 0
+                          ? reply.suggestions
+                          : undefined,
+                      outOfScope: reply.status === "OUT_OF_SCOPE",
+                      streaming: false,
+                    }
+                  : m
+              )
+            );
+          }
+          setIsStreaming(false);
+          return;
+        }
+
+        // SSE streaming
+        const reader = response.body?.getReader();
+        if (!reader) {
+          setIsStreaming(false);
+          return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+
+            if (trimmed.startsWith("event: text")) {
+              // Next data line will have the token
+              continue;
+            }
+
+            if (trimmed.startsWith("event: done")) {
+              continue;
+            }
+
+            if (trimmed.startsWith("data: ")) {
+              const jsonStr = trimmed.slice(6);
+              try {
+                const parsed = JSON.parse(jsonStr);
+
+                if (parsed.token !== undefined) {
+                  // Text token
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId
+                        ? { ...m, content: m.content + parsed.token }
+                        : m
+                    )
+                  );
+                }
+
+                if (parsed.status !== undefined) {
+                  // Done event
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantId
+                        ? {
+                            ...m,
+                            streaming: false,
+                            suggestions:
+                              parsed.suggestions?.length > 0
+                                ? parsed.suggestions
+                                : undefined,
+                            outOfScope: parsed.status === "OUT_OF_SCOPE",
+                          }
+                        : m
+                    )
+                  );
+                }
+              } catch {
+                // Skip malformed JSON
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          // User cancelled
+        } else {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? {
+                    ...m,
+                    content: "Bağlantı hatası. Tekrar dene.",
+                    streaming: false,
+                  }
+                : m
+            )
+          );
+        }
+      } finally {
+        setIsStreaming(false);
+        abortRef.current = null;
+      }
+    },
+    [isStreaming]
+  );
 
   function handleSubmit(event?: FormEvent) {
     event?.preventDefault();
@@ -153,16 +244,19 @@ export function AssistantPanel() {
             <div
               className={`chat-bubble ${msg.role === "user" ? "chat-user" : "chat-assistant"}`}
             >
-              <p className="chat-text">{msg.content}</p>
+              <p className="chat-text">
+                {msg.content}
+                {msg.streaming && <span className="chat-cursor" />}
+              </p>
             </div>
-            {msg.suggestions && msg.suggestions.length > 0 && (
+            {msg.suggestions && msg.suggestions.length > 0 && !msg.streaming && (
               <div className="chat-suggestions">
                 {msg.suggestions.map((s, i) => (
                   <button
                     key={i}
                     className="chat-suggestion"
                     onClick={() => handleSuggestionClick(s)}
-                    disabled={isPending}
+                    disabled={isStreaming}
                     title={s}
                   >
                     {s}
@@ -172,11 +266,6 @@ export function AssistantPanel() {
             )}
           </div>
         ))}
-        {isPending && (
-          <div className="chat-bubble chat-assistant">
-            <p className="chat-text chat-typing">Düşünüyorum...</p>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -189,15 +278,24 @@ export function AssistantPanel() {
           placeholder="Bir soru sor..."
           rows={1}
           maxLength={600}
-          disabled={isPending}
+          disabled={isStreaming}
         />
         <button
           className="chat-send"
           type="submit"
-          disabled={isPending || !input.trim()}
+          disabled={isStreaming || !input.trim()}
           title="Gönder"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>

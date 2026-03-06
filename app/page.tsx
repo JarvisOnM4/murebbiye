@@ -252,20 +252,27 @@ export default function LaunchPage() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.5rem", flexWrap: "wrap" }}>
+        <div className="launch-buttons">
           <button
-            className="launch-start-btn"
+            className="launch-start-btn launch-btn-hero"
             onClick={() => setFlow("nickname")}
             title="Hemen öğrenmeye başla"
           >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
             Başla
           </button>
           <button
-            className="launch-link-btn"
+            className="launch-link-btn launch-btn-secondary"
             onClick={() => router.push("/recover")}
-            title="Mevcut hesabına dön"
+            title="Kurtarma kodunla giriş yap"
           >
-            Kodumla Devam Et
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            Kod ile Bağlan
           </button>
         </div>
 

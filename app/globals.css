@@ -916,6 +916,49 @@ a {
   line-height: 1.4;
 }
 
+/* ── Hero buttons ── */
+
+.launch-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.launch-btn-hero {
+  gap: 0.5rem;
+  padding: 0.85rem 2.5rem;
+  font-size: 1.05rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(45, 212, 168, 0.18) 0%, rgba(45, 212, 168, 0.08) 100%);
+  border: 1px solid rgba(45, 212, 168, 0.45);
+  box-shadow: 0 0 20px rgba(45, 212, 168, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.launch-btn-hero:hover {
+  background: linear-gradient(135deg, rgba(45, 212, 168, 0.28) 0%, rgba(45, 212, 168, 0.14) 100%);
+  border-color: rgba(45, 212, 168, 0.7);
+  box-shadow: 0 0 30px rgba(45, 212, 168, 0.15);
+}
+
+.launch-btn-secondary {
+  gap: 0.45rem;
+  padding: 0.75rem 1.8rem;
+  font-size: 0.9rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #a0a0b0;
+  transition: all 0.25s ease;
+}
+
+.launch-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #d0d0e0;
+}
+
 /* ── Footer ── */
 
 .launch-footer {
@@ -1413,6 +1456,21 @@ a {
 @keyframes chat-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+.chat-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #2dd4a8;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: chat-cursor-blink 0.8s step-end infinite;
+}
+
+@keyframes chat-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .chat-refs {
