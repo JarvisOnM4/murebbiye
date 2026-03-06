@@ -105,6 +105,7 @@ export function AssistantPanel() {
           const payload = await response.json();
           const reply = payload.reply;
           if (reply) {
+            setUsedSuggestions(new Set());
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId
@@ -174,7 +175,8 @@ export function AssistantPanel() {
                 }
 
                 if (parsed.status !== undefined) {
-                  // Done event
+                  // Done event — reset used suggestions for fresh set
+                  setUsedSuggestions(new Set());
                   setMessages((prev) =>
                     prev.map((m) =>
                       m.id === assistantId
