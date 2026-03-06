@@ -30,6 +30,7 @@
     "@prisma/client": "^6.4.1",
     "@upstash/qstash": "^2.7.17",
     "@upstash/redis": "^1.35.0",
+    "@vercel/analytics": "^1.6.1",
     "bcryptjs": "^2.4.3",
     "c12": "^4.0.0-beta.3",
     "jose": "^6.1.3",
