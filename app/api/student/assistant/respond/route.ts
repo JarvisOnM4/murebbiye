@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-const DAILY_QUESTION_LIMIT = 500;
+const DAILY_QUESTION_LIMIT = 100;
 
 const requestSchema = z.object({
   question: z.string().trim().min(3).max(600),
