@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getStudentIdentity } from "@/lib/learner/identity";
+import { checkRateLimit } from "@/lib/learner/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,15 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rateCheck = await checkRateLimit(ip, "learner-pin", 3, 3600);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { error: "Çok fazla deneme. Lütfen bekleyin." },
+      { status: 429 }
+    );
+  }
+
   const identity = await getStudentIdentity();
 
   if (!identity) {

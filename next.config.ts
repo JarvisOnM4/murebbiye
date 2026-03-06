@@ -6,6 +6,7 @@ const securityHeaders = [
   { key: "X-XSS-Protection", value: "1; mode=block" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  { key: "Access-Control-Allow-Origin", value: process.env.APP_BASE_URL || "https://murebbiye.org" },
   {
     key: "Content-Security-Policy",
     value: [

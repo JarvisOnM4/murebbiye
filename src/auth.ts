@@ -149,7 +149,7 @@ const authConfig: NextAuthConfig = {
             nickname: user.nickname,
           });
         } catch (error) {
-          console.warn("[auth] Database lookup failed, trying env fallback mode", error);
+          console.warn("[auth] Database lookup failed, trying env fallback mode");
           return authorizeFromEnvFallback(email, parsed.data.password);
         }
       }

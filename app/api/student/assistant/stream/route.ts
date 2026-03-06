@@ -38,7 +38,8 @@ async function checkAndIncrementQuota(
     const remaining = Math.max(0, DAILY_QUESTION_LIMIT - quota.count);
     return { allowed: quota.count <= DAILY_QUESTION_LIMIT, remaining };
   } catch {
-    return { allowed: true, remaining: DAILY_QUESTION_LIMIT };
+    // DB error — fail closed
+    return { allowed: false, remaining: 0 };
   }
 }
 

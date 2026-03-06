@@ -10,7 +10,12 @@ export async function GET() {
     dbStatus = "unreachable"
   }
 
-  const status = dbStatus === "connected" ? "ok" : "degraded"
+  const dbOk = dbStatus === "connected"
+  const status = dbOk ? "ok" : "degraded"
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ status: dbOk ? "ok" : "degraded" });
+  }
 
   return NextResponse.json(
     {
@@ -19,6 +24,6 @@ export async function GET() {
       db: dbStatus,
       timestamp: new Date().toISOString()
     },
-    { status: dbStatus === "connected" ? 200 : 503 }
+    { status: dbOk ? 200 : 503 }
   )
 }

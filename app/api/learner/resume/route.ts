@@ -53,8 +53,8 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json(
-      { error: "Kurtarma kodu bulunamadı." },
-      { status: 404 }
+      { error: "Giriş bilgileri hatalı." },
+      { status: 403 }
     );
   }
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     const pinValid = await bcrypt.compare(parsed.data.pin, user.pinHash);
     if (!pinValid) {
       return NextResponse.json(
-        { error: "Yanlış PIN." },
+        { error: "Giriş bilgileri hatalı." },
         { status: 403 }
       );
     }

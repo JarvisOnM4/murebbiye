@@ -92,7 +92,9 @@ export async function POST(request: Request) {
   // For now, log the verification URL.
   const baseUrl = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const verifyUrl = `${baseUrl}/api/guardian/verify?token=${verificationToken}`;
-  console.log(`[guardian] Verification URL: ${verifyUrl}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[guardian] Verification URL: ${verifyUrl}`);
+  }
 
   return NextResponse.json(
     { message: "Doğrulama e-postası gönderildi." },

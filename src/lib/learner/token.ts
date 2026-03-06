@@ -2,7 +2,7 @@ import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "learner_session";
-const MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 export type LearnerTokenPayload = JWTPayload & {
   sub: string;

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/auth"
 import { listApprovedAssetsForLesson } from "@/lib/media-agent/service"
 import { getStudentIdentity } from "@/lib/learner/identity"
+import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 
@@ -25,6 +26,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const identity = await getStudentIdentity()
   if (identity) {
     const { lessonId } = await params
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { studentId: true },
+    });
+    if (!lesson || lesson.studentId !== identity.id) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     const assets = await listApprovedAssetsForLesson(lessonId)
     return NextResponse.json({ assets }, { status: 200 })
   }

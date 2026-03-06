@@ -47,8 +47,8 @@ async function checkAndIncrementQuota(userId: string): Promise<{ allowed: boolea
     const remaining = Math.max(0, DAILY_QUESTION_LIMIT - quota.count);
     return { allowed: quota.count <= DAILY_QUESTION_LIMIT, remaining };
   } catch {
-    // Table may not exist yet in production — allow request
-    return { allowed: true, remaining: DAILY_QUESTION_LIMIT };
+    // DB error — fail closed
+    return { allowed: false, remaining: 0 };
   }
 }
 
