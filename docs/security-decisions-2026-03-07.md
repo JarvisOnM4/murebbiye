@@ -60,8 +60,39 @@
 - EU AI Act Art. 52: AI disclosure banner
 - Rate limiter production warning
 
+## Veli Onayi: Kademeli Erisim Modeli
+
+**Tetikleyici**: 100 distinct kullanici (Vercel Analytics)
+**Durum**: BEKLEMEDE — prototip asamasinda zorunlu degil
+
+### Tasarim: Graduated Access
+
+1. **Deneme (5 soru)**: Kayit olmadan 5 soru sorabilir. Iyi bir ilk izlenim icin yeterli.
+2. **Guardian Gate**: 5. sorudan sonra veli onayi zorunlu. Cocuk devam edemez.
+3. **Tam Erisim**: Veli onayladiginda gunluk 100 soru limiti aktif.
+
+### Veli Onay Yontemleri (en seamless → en guvenli)
+
+| Yontem | UX | Guvenlik | Notlar |
+|--------|-----|----------|--------|
+| **QR Kod** | Cocuk ekraninda QR → veli telefonla tarar → onay sayfasi | Orta | En hizli, fiziksel yakinlik gerektirir |
+| **E-posta linki** | Cocuk veli e-postasini girer → veli maile gelen linke tiklar | Yuksek | Standart, e-posta dogrulamasi dahil |
+| **SMS kodu** | Cocuk veli telefonunu girer → SMS ile 6 haneli kod | Yuksek | Maliyet var (Twilio/similar), en taninir UX |
+| **Paylasim linki** | Cocuk "Velime gonder" butonuna basar → WhatsApp/iMessage ile link paylasir | Dusuk-Orta | En dusuk friction, ama cocuk kendisi onaylayabilir |
+
+### Onerilen Uygulama Sirasi
+1. **MVP**: E-posta linki (sifir maliyet, yuksek guvenlik)
+2. **V2**: QR kod eklenir (sinif ortami icin ideal)
+3. **V3**: SMS (kullanici tabani buyurse)
+
+### Teknik Notlar
+- Guardian modeli zaten mevcut (`Guardian` Prisma model, `/api/guardian/link`)
+- Mevcut guardian link akisi genisletilecek, sifirdan yazilmayacak
+- Deneme sayaci: `sessionStorage` veya anonim cookie (kayitsiz kullanici icin)
+- Onay sonrasi: guardian kaydı olusur, cocuk profili guardian'a baglanir
+
 ## Gelecekte Yapilacaklar
-- [ ] Kullanici tabani buyuyunce: yas dogrulama + zorunlu veli onayi
+- [ ] **100 kullanici milestone**: Veli onayi kademeli erisim implementasyonu (yukaridaki tasarim)
 - [ ] KVKK compliance: veri silme + disa aktarma endpointleri
 - [ ] Anonim aggregate metrikler (audit trail yerine)
 - [ ] OpenRouter key rotasyonu (dashboard'dan manual)

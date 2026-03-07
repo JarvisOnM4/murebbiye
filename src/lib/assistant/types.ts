@@ -30,10 +30,16 @@ export type ScopeConstrainedReply = {
   guardrail: ScopeGuardPayload;
 };
 
+export type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export type ScopeConstrainedReplyInput = {
   studentId: string;
   question: string;
   track: LessonTrack;
   locale: "tr" | "en";
   excludeSuggestions?: string[];
+  history?: ChatHistoryMessage[];
 };

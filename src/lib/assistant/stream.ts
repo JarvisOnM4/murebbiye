@@ -345,6 +345,30 @@ export async function streamWithScopeGuard(
   const model =
     process.env.PRIMARY_MODEL_NAME ?? "qwen/qwen3-235b-a22b-2507";
 
+  // Build messages with conversation history for context continuity
+  const llmMessages: { role: string; content: string }[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+  ];
+
+  // Include last 2-3 turns of conversation history (max 6 messages)
+  if (input.history && input.history.length > 0) {
+    const recentHistory = input.history.slice(-6);
+    for (const msg of recentHistory) {
+      llmMessages.push({
+        role: msg.role,
+        content: msg.role === "user"
+          ? `<student_question>\n${sanitizeStudentInput(msg.content)}\n</student_question>`
+          : msg.content.slice(0, 600),
+      });
+    }
+  }
+
+  // Current question with curriculum context
+  llmMessages.push({
+    role: "user",
+    content: `MÜFREDAT İÇERİĞİ:\n${context}\n\n---\n\n<student_question>\n${sanitizeStudentInput(input.question)}\n</student_question>`,
+  });
+
   const llmResponse = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -353,13 +377,7 @@ export async function streamWithScopeGuard(
     },
     body: JSON.stringify({
       model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: `MÜFREDAT İÇERİĞİ:\n${context}\n\n---\n\n<student_question>\n${sanitizeStudentInput(input.question)}\n</student_question>`,
-        },
-      ],
+      messages: llmMessages,
       max_tokens: 200,
       temperature: 0.7,
       stream: true,

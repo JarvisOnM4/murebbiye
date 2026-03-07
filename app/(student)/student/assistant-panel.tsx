@@ -67,6 +67,12 @@ export function AssistantPanel() {
       abortRef.current = controller;
 
       try {
+        // Build conversation history from last 3 exchanges (6 messages max)
+        const history = messages
+          .filter((m) => m.id !== "welcome" && !m.streaming && m.content)
+          .slice(-6)
+          .map((m) => ({ role: m.role, content: m.content }));
+
         const response = await fetch("/api/student/assistant/stream", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -75,6 +81,7 @@ export function AssistantPanel() {
             track: "AI_MODULE",
             locale: "tr",
             excludeSuggestions: [...usedSuggestionsRef.current],
+            history,
           }),
           credentials: "same-origin",
           signal: controller.signal,

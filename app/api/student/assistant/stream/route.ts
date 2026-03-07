@@ -17,6 +17,10 @@ const requestSchema = z.object({
   track: z.nativeEnum(LessonTrack).default(LessonTrack.ENGLISH),
   locale: z.enum(["tr", "en"]).default("tr"),
   excludeSuggestions: z.array(z.string()).max(50).default([]),
+  history: z.array(z.object({
+    role: z.enum(["user", "assistant"]),
+    content: z.string().max(800),
+  })).max(6).default([]),
 });
 
 function todayDateString() {
@@ -111,6 +115,7 @@ export async function POST(request: Request) {
           track: parsed.data.track,
           locale: parsed.data.locale,
           excludeSuggestions: parsed.data.excludeSuggestions,
+          history: parsed.data.history,
         });
 
         try {
