@@ -349,3 +349,62 @@ model GuardianLink {
   @@index([guardianEmail])
   @@index([verificationToken])
 }
+
+enum DrawingExerciseStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model DrawingExercise {
+  id              String                 @id @default(cuid())
+  slug            String                 @unique
+  titleTr         String
+  titleEn         String?
+  descriptionTr   String
+  unitNumber      Int
+  lessonNumber    Int
+  targetImageKey  String
+  templateSpec    Json
+  generationMode  String                 @default("template")
+  status          DrawingExerciseStatus  @default(DRAFT)
+  maxAttempts     Int                    @default(20)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  attempts        DrawingAttempt[]
+
+  @@index([unitNumber, lessonNumber])
+  @@index([status])
+}
+
+model DrawingAttempt {
+  id              String             @id @default(cuid())
+  exerciseId      String
+  studentId       String
+  status          String             @default("in_progress")
+  attemptCount    Int                @default(0)
+  hintsUsed       Int                @default(0)
+  matchedElements Json               @default("[]")
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  exercise        DrawingExercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  messages        DrawingMessage[]
+
+  @@index([studentId, exerciseId])
+  @@index([exerciseId, status])
+}
+
+model DrawingMessage {
+  id              String          @id @default(cuid())
+  attemptId       String
+  role            String
+  content         String
+  analysis        Json?
+  generatedImage  String?
+  costUsd         Decimal?        @db.Decimal(10, 6)
+  createdAt       DateTime        @default(now())
+  attempt         DrawingAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId, createdAt])
+}
