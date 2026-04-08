@@ -21,7 +21,7 @@ export function TargetImagePanel({ targetImageKey, activeClue }: TargetImagePane
   // Build image URL — in dev, use a placeholder if no key is provided
   const imageUrl =
     targetImageKey
-      ? `/api/student/media/${encodeURIComponent(targetImageKey)}`
+      ? (targetImageKey.startsWith("/") ? targetImageKey : `/${targetImageKey}`)
       : null;
 
   return (

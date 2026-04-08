@@ -54,6 +54,7 @@ export function ChatPanel({
   const [isSending, setIsSending] = useState(false);
   const [isHinting, setIsHinting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const isLoading = isSending || isHinting || externalLoading;
   const noMoreClues = hintsUsed >= totalClues;
@@ -119,6 +120,8 @@ export function ChatPanel({
       );
     } finally {
       setIsSending(false);
+      // Delay focus to next frame — textarea is still disabled until re-render
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }
 
@@ -199,6 +202,7 @@ export function ChatPanel({
       <div className="exercise-chat-footer">
         <form className="chat-input-bar" onSubmit={handleSubmit}>
           <textarea
+            ref={inputRef}
             className="chat-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}

@@ -13,29 +13,8 @@ type CanvasPanelProps = {
   visibleLayers: string[];
 };
 
-// Generate a consistent placeholder color from a string
-function layerColor(id: string): string {
-  const colors = [
-    "#1a3a4a",
-    "#2a4a3a",
-    "#3a3a5a",
-    "#4a3a2a",
-    "#2a3a4a",
-    "#3a4a2a",
-    "#4a2a3a",
-    "#2a4a4a",
-  ];
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) & 0xffffffff;
-  }
-  return colors[Math.abs(hash) % colors.length] ?? "#2a3a4a";
-}
-
 export function CanvasPanel({ layers, visibleLayers }: CanvasPanelProps) {
   const visibleSet = new Set(visibleLayers);
-
-  // Sort layers by zIndex ascending
   const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
 
   return (
@@ -44,6 +23,11 @@ export function CanvasPanel({ layers, visibleLayers }: CanvasPanelProps) {
       <div className="canvas-stage">
         {sortedLayers.map((layer) => {
           const isVisible = visibleSet.has(layer.id);
+          // Convert imageKey like "exercises/blue-cabrio/bg.png" to "/exercises/blue-cabrio/bg.png"
+          const src = layer.imageKey.startsWith("/")
+            ? layer.imageKey
+            : `/${layer.imageKey}`;
+
           return (
             <div
               key={layer.id}
@@ -51,16 +35,16 @@ export function CanvasPanel({ layers, visibleLayers }: CanvasPanelProps) {
               style={{
                 zIndex: layer.zIndex,
                 opacity: isVisible ? 1 : 0,
+                transition: "opacity 0.5s ease-out",
               }}
               aria-hidden={!isVisible}
             >
-              {/* Dev placeholder: colored rectangle with layer ID */}
-              <div
-                className="canvas-layer-placeholder"
-                style={{ background: layerColor(layer.id) }}
-              >
-                <span className="canvas-layer-id">{layer.id}</span>
-              </div>
+              <img
+                src={src}
+                alt={layer.id}
+                className="canvas-layer-img"
+                draggable={false}
+              />
             </div>
           );
         })}

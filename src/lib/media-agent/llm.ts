@@ -103,6 +103,7 @@ async function callOpenRouter(input: LlmCallInput, model: string): Promise<LlmCa
       max_tokens: input.maxTokens ?? 2048,
       temperature: input.temperature ?? 0.7,
       stream: false,
+      ...(input.jsonMode && { response_format: { type: "json_object" } }),
     }),
   })
 
@@ -205,6 +206,20 @@ export async function callLlmJson<T = Record<string, unknown>>(
   input: LlmCallInput
 ): Promise<{ parsed: T } & LlmCallOutput> {
   const result = await callLlm({ ...input, jsonMode: true })
-  const parsed = JSON.parse(result.content) as T
+
+  // Some models (qwen3) output thinking text before JSON — extract JSON
+  let content = result.content.trim()
+  if (!content.startsWith("{") && !content.startsWith("[")) {
+    const jsonStart = content.indexOf("{")
+    const arrStart = content.indexOf("[")
+    const start = jsonStart >= 0 && arrStart >= 0
+      ? Math.min(jsonStart, arrStart)
+      : Math.max(jsonStart, arrStart)
+    if (start >= 0) {
+      content = content.slice(start)
+    }
+  }
+
+  const parsed = JSON.parse(content) as T
   return { ...result, parsed }
 }

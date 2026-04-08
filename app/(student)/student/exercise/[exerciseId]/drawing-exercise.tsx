@@ -63,7 +63,8 @@ export function DrawingExercise({
     .map((l) => l.id);
 
   const [visibleLayers, setVisibleLayers] = useState<string[]>(defaultVisibleLayers);
-  const [isComplete, setIsComplete] = useState(
+  const [isComplete, setIsComplete] = useState(false);
+  const [showModal, setShowModal] = useState(
     initialAttempt.status === "completed"
   );
   const [attemptCount, setAttemptCount] = useState(initialAttempt.attemptCount);
@@ -84,8 +85,9 @@ export function DrawingExercise({
     setAttemptCount(reply.attemptCount);
     if (reply.isComplete) {
       setIsComplete(true);
-      // Clear any active clue
       setActiveClue(null);
+      // Show completed picture + chat congratulation first, then modal after delay
+      setTimeout(() => setShowModal(true), 4000);
     }
   }
 
@@ -117,13 +119,8 @@ export function DrawingExercise({
       </div>
 
       <div className="exercise-layout">
-        {/* Left column: target image (top) + chat (bottom) */}
+        {/* Left column: chat */}
         <div className="exercise-left">
-          <TargetImagePanel
-            targetImageKey={exercise.targetImageKey}
-            activeClue={activeClue}
-          />
-
           <ChatPanel
             exerciseId={exerciseId}
             attemptId={attemptId}
@@ -138,8 +135,12 @@ export function DrawingExercise({
           />
         </div>
 
-        {/* Right column: canvas */}
+        {/* Right column: target image (top) + canvas (bottom) */}
         <div className="exercise-right">
+          <TargetImagePanel
+            targetImageKey={exercise.targetImageKey}
+            activeClue={activeClue}
+          />
           <CanvasPanel
             layers={exercise.layers}
             visibleLayers={visibleLayers}
@@ -148,10 +149,10 @@ export function DrawingExercise({
       </div>
 
       <CompletionModal
-        isOpen={isComplete}
+        isOpen={showModal}
         attemptCount={attemptCount}
         hintsUsed={hintsUsed}
-        lessonHref="/student"
+        lessonHref="/student/lesson/unit4-ders1"
       />
     </>
   );

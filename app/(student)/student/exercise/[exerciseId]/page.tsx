@@ -1,4 +1,5 @@
 import { UserRole } from "@prisma/client";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLearnerCookie, verifyLearnerToken } from "@/lib/learner/token";
@@ -43,11 +44,18 @@ export default async function ExercisePage({ params }: PageProps) {
     process.env.NEXT_PUBLIC_APP_URL ??
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+
   const res = await fetch(`${baseUrl}/api/student/exercise/${exerciseId}/start`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    // Forward cookies so the identity check passes
-    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Cookie": cookieHeader,
+    },
   }).catch(() => null);
 
   if (!res || !res.ok) {

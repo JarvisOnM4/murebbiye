@@ -46,7 +46,7 @@ export default function LaunchPage() {
   }
 
   function handleContinue() {
-    router.push("/student");
+    router.push("/student/lesson/unit4-ders1");
   }
 
   if (flow === "code") {
