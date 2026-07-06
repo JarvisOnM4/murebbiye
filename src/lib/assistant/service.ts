@@ -1,6 +1,7 @@
 import { listReadyCurriculumChunks } from "@/lib/curriculum/repository";
 import type { CurriculumChunkContext } from "@/lib/curriculum/types";
 import { callLlm } from "@/lib/media-agent/llm";
+import { isResponseSafe, UNSAFE_FALLBACK_MESSAGE } from "@/lib/assistant/safety";
 import type {
   AssistantReference,
   ScopeConstrainedReply,
@@ -196,15 +197,6 @@ function buildSuggestions(question: string, ranked: ScoredChunk[]): string[] {
   return suggestions.slice(0, 3);
 }
 
-const UNSAFE_PATTERNS = [
-  /\b(porn|sex(?:ual)?|violence|kill(?:ing)?|suicide|drug|weapon|murder|rape)\b/i,
-  /\b(küfür|seks|silah|uyuşturucu|intihar|öldür|tecavüz|şiddet)\b/i,
-];
-
-function isResponseSafe(text: string): boolean {
-  return !UNSAFE_PATTERNS.some((p) => p.test(text));
-}
-
 export async function respondWithScopeGuard(
   input: ScopeConstrainedReplyInput
 ): Promise<ScopeConstrainedReply> {
@@ -272,7 +264,7 @@ export async function respondWithScopeGuard(
     });
     answer = llmResult.content;
     if (!isResponseSafe(answer)) {
-      answer = "Bu konuda sana yardımcı olamam. Müfredat konularını sormayı dene!";
+      answer = UNSAFE_FALLBACK_MESSAGE;
     }
   } catch (err) {
     // LLM failed — fall back to clean excerpt

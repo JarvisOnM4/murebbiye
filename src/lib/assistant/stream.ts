@@ -1,6 +1,7 @@
 import { listReadyCurriculumChunks } from "@/lib/curriculum/repository";
 import type { CurriculumChunkContext } from "@/lib/curriculum/types";
 import type { ScopeConstrainedReplyInput } from "@/lib/assistant/types";
+import { isResponseSafe, UNSAFE_FALLBACK_MESSAGE } from "@/lib/assistant/safety";
 
 type ScoredChunk = {
   chunk: CurriculumChunkContext;
@@ -415,6 +416,36 @@ export async function streamWithScopeGuard(
   return new ReadableStream({
     async pull(controller) {
       let buffer = "";
+      // Full assistant text so far, checked against the child-safety filter
+      // before each token is flushed to the client.
+      let accumulated = "";
+
+      // Safety filter tripped: stop reading model tokens and send the same
+      // fallback the non-streaming path uses. Tokens flushed on earlier
+      // iterations are already on the client and cannot be retracted over
+      // SSE — but each of them passed the filter individually, so at most a
+      // partial-word fragment of the unsafe content can have leaked before
+      // the word completed and tripped the check.
+      const stopWithSafetyFallback = () => {
+        reader.cancel();
+        const prefix = accumulated.length > 0 ? "\n\n" : "";
+        controller.enqueue(
+          encoder.encode(
+            sseEvent("text", { token: `${prefix}${UNSAFE_FALLBACK_MESSAGE}` })
+          )
+        );
+        controller.enqueue(
+          encoder.encode(
+            sseEvent("done", {
+              status: "FALLBACK",
+              suggestions,
+              references,
+              guardrail,
+            })
+          )
+        );
+        controller.close();
+      };
 
       // eslint-disable-next-line no-constant-condition
       while (true) {
@@ -427,6 +458,11 @@ export async function streamWithScopeGuard(
             for (const line of lines) {
               const token = extractToken(line);
               if (token) {
+                if (!isResponseSafe(accumulated + token)) {
+                  stopWithSafetyFallback();
+                  return;
+                }
+                accumulated += token;
                 controller.enqueue(
                   encoder.encode(sseEvent("text", { token }))
                 );
@@ -457,6 +493,11 @@ export async function streamWithScopeGuard(
         for (const line of lines) {
           const token = extractToken(line);
           if (token) {
+            if (!isResponseSafe(accumulated + token)) {
+              stopWithSafetyFallback();
+              return;
+            }
+            accumulated += token;
             controller.enqueue(
               encoder.encode(sseEvent("text", { token }))
             );
